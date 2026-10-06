@@ -1054,6 +1054,25 @@
     </div>
   </div>
 
+
+  <div id="gpx-conflict-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header">
+        <h2>같은 이름 GPX</h2>
+        <button class="modal-close" data-modal="gpx-conflict-modal" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="gpx-conflict-msg">히스토리에 같은 이름 파일이 있습니다.</p>
+        <p class="help-text">덮어쓰면 기존 파일·큐시트 플랜이 새 내용으로 바뀝니다. 추가는 이름에 번호를 붙입니다.</p>
+      </div>
+      <div class="modal-footer" style="flex-wrap:wrap;gap:8px;">
+        <button type="button" class="btn-secondary" id="gpx-conflict-cancel">취소</button>
+        <button type="button" class="btn-secondary" id="gpx-conflict-add">추가</button>
+        <button type="button" class="btn-primary" id="gpx-conflict-overwrite">덮어쓰기</button>
+      </div>
+    </div>
+  </div>
+
   <div id="history-modal" class="modal hidden">
     <div class="modal-content">
       <div class="modal-header">
@@ -1078,7 +1097,7 @@
 
   <script>
     const DB_NAME = 'GpxRidingHelper';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
     const STORE_SETTINGS = 'settings';
     const STORE_GPX_HISTORY = 'gpxHistory';
     const STORE_PLANS = 'ridingPlans';
@@ -1092,11 +1111,21 @@
         request.onsuccess = () => { db = request.result; resolve(db); };
         request.onupgradeneeded = (event) => {
           const database = event.target.result;
+          const oldV = event.oldVersion || 0;
           if (!database.objectStoreNames.contains(STORE_SETTINGS)) {
             database.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
           }
+          // v3: 파일명(fileKey) 단위로 히스토리·플랜 관리
+          if (oldV < 3) {
+            if (database.objectStoreNames.contains(STORE_GPX_HISTORY)) {
+              database.deleteObjectStore(STORE_GPX_HISTORY);
+            }
+            if (database.objectStoreNames.contains(STORE_PLANS)) {
+              database.deleteObjectStore(STORE_PLANS);
+            }
+          }
           if (!database.objectStoreNames.contains(STORE_GPX_HISTORY)) {
-            const store = database.createObjectStore(STORE_GPX_HISTORY, { keyPath: 'id', autoIncrement: true });
+            const store = database.createObjectStore(STORE_GPX_HISTORY, { keyPath: 'fileKey' });
             store.createIndex('loadedAt', 'loadedAt', { unique: false });
           }
           if (!database.objectStoreNames.contains(STORE_PLANS)) {
@@ -1128,23 +1157,40 @@
       });
     }
 
-    function gpxContentKey(content, name) {
-      // 내용 기반 키 (파일명 무시 → 같은 GPX면 이름 달라도 동일 키)
-      // 샘플 + 길이 + 간단 롤링 해시로 충돌 가능성 낮춤
-      const c = content || '';
-      const len = c.length;
-      const head = c.slice(0, 400);
-      const mid = len > 800 ? c.slice((len >> 1) - 100, (len >> 1) + 100) : '';
-      const tail = c.slice(-200);
-      let h = 2166136261;
-      const s = len + '|' + head + '|' + mid + '|' + tail;
-      for (let i = 0; i < s.length; i++) {
-        h ^= s.charCodeAt(i);
-        h = Math.imul(h, 16777619);
-      }
-      return 'gpx_' + (h >>> 0).toString(16) + '_' + len.toString(16);
+    /** 파일명 기준 키 (경로 제거, 소문자, .gpx 보장) */
+    function gpxFileKey(name) {
+      let n = String(name || 'route.gpx').trim();
+      n = n.replace(/^.*[\\/]/, '');
+      if (!n) n = 'route.gpx';
+      if (!/\.gpx$/i.test(n)) n += '.gpx';
+      return n.toLowerCase();
     }
 
+    /** 표시용 이름 (원본 파일명 유지) */
+    function gpxDisplayName(name) {
+      let n = String(name || 'route.gpx').trim();
+      n = n.replace(/^.*[\\/]/, '');
+      if (!n) n = 'route.gpx';
+      if (!/\.gpx$/i.test(n)) n += '.gpx';
+      return n;
+    }
+
+    function gpxContentKey(content, name) {
+      // 하위 호환: 이제 플랜/히스토리 키는 파일명 기준
+      return gpxFileKey(name || 'route.gpx');
+    }
+
+    async function uniqueGpxFileName(desiredName) {
+      const base = gpxDisplayName(desiredName).replace(/\.gpx$/i, '');
+      let candidate = base + '.gpx';
+      let n = 2;
+      while (await getGpxByFileKey(gpxFileKey(candidate))) {
+        candidate = base + ' (' + n + ').gpx';
+        n += 1;
+        if (n > 99) break;
+      }
+      return candidate;
+    }
     function saveSetting(key, value) {
       return new Promise((resolve, reject) => {
         if (!db) return reject(new Error('DB not initialized'));
@@ -1174,21 +1220,23 @@
     function saveGpxToHistory(gpxData) {
       return new Promise((resolve, reject) => {
         if (!db) return reject(new Error('DB not initialized'));
+        const fileKey = gpxFileKey(gpxData.name);
         const tx = db.transaction(STORE_GPX_HISTORY, 'readwrite');
         const record = {
-          name: gpxData.name, content: gpxData.content,
+          fileKey,
+          name: gpxDisplayName(gpxData.name),
+          content: gpxData.content,
           distance: gpxData.distance || null,
           elevationGain: gpxData.elevationGain || null,
           pointCount: gpxData.pointCount || null,
           loadedAt: Date.now()
         };
-        const req = tx.objectStore(STORE_GPX_HISTORY).add(record);
-        req.onsuccess = () => resolve(req.result);
+        const req = tx.objectStore(STORE_GPX_HISTORY).put(record);
+        req.onsuccess = () => resolve(fileKey);
         req.onerror = () => reject(req.error);
       });
     }
-
-    function getGpxHistory(limit = 20) {
+    function getGpxHistory(limit = 30) {
       return new Promise((resolve, reject) => {
         if (!db) return reject(new Error('DB not initialized'));
         const tx = db.transaction(STORE_GPX_HISTORY, 'readonly');
@@ -1206,27 +1254,46 @@
         req.onerror = () => reject(req.error);
       });
     }
-
-    function getGpxById(id) {
+    function getGpxByFileKey(fileKey) {
       return new Promise((resolve, reject) => {
         if (!db) return reject(new Error('DB not initialized'));
         const tx = db.transaction(STORE_GPX_HISTORY, 'readonly');
-        const req = tx.objectStore(STORE_GPX_HISTORY).get(id);
+        const req = tx.objectStore(STORE_GPX_HISTORY).get(fileKey);
         req.onsuccess = () => resolve(req.result || null);
         req.onerror = () => reject(req.error);
       });
     }
 
-    function deleteGpxFromHistory(id) {
+    function getGpxById(idOrKey) {
+      // 하위 호환: fileKey 문자열
+      return getGpxByFileKey(idOrKey);
+    }
+    function deletePlanFromDB(gpxKey) {
       return new Promise((resolve, reject) => {
         if (!db) return reject(new Error('DB not initialized'));
-        const tx = db.transaction(STORE_GPX_HISTORY, 'readwrite');
-        const req = tx.objectStore(STORE_GPX_HISTORY).delete(id);
+        if (!gpxKey) return resolve();
+        const tx = db.transaction(STORE_PLANS, 'readwrite');
+        const req = tx.objectStore(STORE_PLANS).delete(gpxKey);
         req.onsuccess = () => resolve();
         req.onerror = () => reject(req.error);
       });
     }
 
+    async function deleteGpxFromHistory(fileKey) {
+      if (!db) throw new Error('DB not initialized');
+      const key = gpxFileKey(fileKey);
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_GPX_HISTORY, 'readwrite');
+        const req = tx.objectStore(STORE_GPX_HISTORY).delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+      await deletePlanFromDB(key);
+      // 현재 열린 파일이면 언로드
+      if (state.currentGpxKey && gpxFileKey(state.currentGpxKey) === key) {
+        unloadCurrentGpx();
+      }
+    }
     const state = {
       settings: {
         kakaoApiKey: null,
@@ -1404,7 +1471,7 @@
       try {
         const history = await getGpxHistory(1);
         if (history.length > 0) {
-          const full = await getGpxById(history[0].id);
+          const full = await getGpxByFileKey(history[0].fileKey || gpxFileKey(history[0].name));
           if (full) await loadGpxContent(full.content, full.name, false);
         } else {
           openModal('history-modal');
@@ -1415,10 +1482,92 @@
       }
     }
 
+    let _gpxConflictResolve = null;
+    let _gpxConflictPending = null;
+
+    function askGpxConflict(displayName) {
+      return new Promise((resolve) => {
+        _gpxConflictResolve = resolve;
+        const msg = $('#gpx-conflict-msg');
+        if (msg) msg.textContent = '「' + displayName + '」이(가) 히스토리에 있습니다.';
+        openModal('gpx-conflict-modal');
+      });
+    }
+
+    function resolveGpxConflict(choice) {
+      closeModal('gpx-conflict-modal');
+      if (_gpxConflictResolve) {
+        const r = _gpxConflictResolve;
+        _gpxConflictResolve = null;
+        r(choice);
+      }
+    }
+
     async function handleGpxFile(file) {
       if (!file) return;
-      await loadGpxContent(await file.text(), file.name, true);
+      const gpxText = await file.text();
+      const displayName = gpxDisplayName(file.name);
+      const fileKey = gpxFileKey(displayName);
+      let existing = null;
+      try { existing = await getGpxByFileKey(fileKey); } catch (_) {}
+      if (existing) {
+        const choice = await askGpxConflict(displayName);
+        if (choice === 'cancel') return;
+        if (choice === 'add') {
+          const newName = await uniqueGpxFileName(displayName);
+          await loadGpxContent(gpxText, newName, true);
+          closeModal('history-modal');
+          return;
+        }
+        // overwrite: 같은 키로 put → 플랜은 새 GPX에 맞게 restoreOrInitPlan이 IDB/GPX 중 선택
+        // 내용이 바뀌면 기존 플랜 거리 경계가 어긋날 수 있어 덮어쓰기 시 플랜도 삭제 후 재초기화 옵션
+        await deletePlanFromDB(fileKey);
+        await loadGpxContent(gpxText, displayName, true);
+        closeModal('history-modal');
+        return;
+      }
+      await loadGpxContent(gpxText, displayName, true);
       closeModal('history-modal');
+    }
+    function clearMapRoute() {
+      try {
+        if (state.routePolyline && state.map) {
+          state.routePolyline.setMap(null);
+          state.routePolyline = null;
+        }
+        if (state.segmentBoundaryOverlays) {
+          state.segmentBoundaryOverlays.forEach(o => { try { o.setMap(null); } catch (_) {} });
+          state.segmentBoundaryOverlays = [];
+        }
+        if (state.hoverMarker) {
+          try { state.hoverMarker.setMap(null); } catch (_) {}
+          state.hoverMarker = null;
+        }
+      } catch (_) {}
+    }
+
+    function unloadCurrentGpx() {
+      state.currentGpx = null;
+      state.currentGpxText = null;
+      state.currentGpxKey = null;
+      state.segments = [];
+      state.nodes = [];
+      state.selectedSegmentId = null;
+      state.selectedNodeId = null;
+      state.selectedWaypointIdx = -1;
+      state.chartZoom = { minDist: 0, maxDist: 1 };
+      planSaveMeta.lastSavedAt = null;
+      planSaveMeta.phase = 'idle';
+      setPlanSaveStatus('idle');
+      clearMapRoute();
+      try { redrawCharts(); } catch (_) {}
+      try { renderSegTable(); } catch (_) {}
+      updateSegmentButton();
+      closeRideMode();
+      const nameEl = $('#seg-route-name');
+      if (nameEl) nameEl.textContent = '—';
+      const metaEl = $('#seg-route-meta');
+      if (metaEl) metaEl.textContent = '';
     }
 
     async function loadGpxContent(gpxText, name, saveToHistory = true) {
@@ -1428,9 +1577,9 @@
           alert('유효한 경로 포인트가 없는 GPX 파일입니다.');
           return;
         }
-        state.currentGpx = { name, ...parsed };
+        state.currentGpx = { name: gpxDisplayName(name), ...parsed };
         state.currentGpxText = gpxText;
-        state.currentGpxKey = gpxContentKey(gpxText, name);
+        state.currentGpxKey = gpxFileKey(name);
         state.selectedWaypointIdx = -1;
         state.selectedSegmentId = null;
         planSaveMeta.lastSavedAt = null;
@@ -1950,7 +2099,8 @@
           id: prev ? prev.id : undefined,
           name: (prev && prev.name) || fallbackName || '',
           dist,
-          pointIdx
+          pointIdx,
+          role: (prev && prev.role) || undefined
         }));
       };
       // first node
@@ -2004,38 +2154,12 @@
     function tryParsePlanFromGpxText(gpxText) {
       try {
         const xml = new DOMParser().parseFromString(gpxText, 'text/xml');
-        const segs = xml.getElementsByTagNameNS('https://gpx-riding-helper.local/ns', 'segment');
-        if (!segs.length) {
-          // prefix 없이 localName만
-          const all = xml.getElementsByTagName('*');
-          const list = [];
-          let startTime = null;
-          for (const el of all) {
-            if (el.localName === 'plan' && el.getAttribute('startTime')) startTime = el.getAttribute('startTime');
-            if (el.localName === 'segment' && el.getAttribute('startDist') != null) {
-              list.push({
-                id: el.getAttribute('id') || undefined,
-                name: el.getAttribute('name') || '구간',
-                startDist: parseFloat(el.getAttribute('startDist')),
-                endDist: parseFloat(el.getAttribute('endDist')),
-                targetDurationSec: el.getAttribute('targetDuration') != null ? parseFloat(el.getAttribute('targetDuration')) : null,
-                restAfterSec: el.getAttribute('restAfter') != null ? parseFloat(el.getAttribute('restAfter')) : 0,
-                targetPower: el.getAttribute('targetPower') != null ? parseFloat(el.getAttribute('targetPower')) : null,
-                targetHr: el.getAttribute('targetHr') != null ? parseFloat(el.getAttribute('targetHr')) : null,
-                limitPower: el.getAttribute('limitPower') != null ? parseFloat(el.getAttribute('limitPower')) : null,
-                limitHr: el.getAttribute('limitHr') != null ? parseFloat(el.getAttribute('limitHr')) : null,
-                note: el.getAttribute('note') || ''
-              });
-            }
-          }
-          if (!list.length) return null;
-          return { startTime, segments: list };
-        }
-        const list = [];
-        for (const el of segs) {
-          list.push({
+        const RH_NS = 'https://gpx-riding-helper.local/ns';
+
+        function readSegment(el) {
+          return {
             id: el.getAttribute('id') || undefined,
-            name: el.getAttribute('name') || '구간',
+            name: el.getAttribute('name') || '',
             startDist: parseFloat(el.getAttribute('startDist')),
             endDist: parseFloat(el.getAttribute('endDist')),
             targetDurationSec: el.getAttribute('targetDuration') != null ? parseFloat(el.getAttribute('targetDuration')) : null,
@@ -2045,15 +2169,50 @@
             limitPower: el.getAttribute('limitPower') != null ? parseFloat(el.getAttribute('limitPower')) : null,
             limitHr: el.getAttribute('limitHr') != null ? parseFloat(el.getAttribute('limitHr')) : null,
             note: el.getAttribute('note') || ''
-          });
+          };
         }
-        const planEl = xml.getElementsByTagNameNS('https://gpx-riding-helper.local/ns', 'plan')[0];
-        return { startTime: planEl ? planEl.getAttribute('startTime') : null, segments: list };
+        function readNode(el) {
+          return {
+            id: el.getAttribute('id') || undefined,
+            name: el.getAttribute('name') || '',
+            dist: parseFloat(el.getAttribute('dist')),
+            role: el.getAttribute('role') || 'mid'
+          };
+        }
+
+        let startTime = null;
+        const nodes = [];
+        const list = [];
+
+        // NS 우선
+        const planEl = xml.getElementsByTagNameNS(RH_NS, 'plan')[0];
+        if (planEl) startTime = planEl.getAttribute('startTime');
+        const nsNodes = xml.getElementsByTagNameNS(RH_NS, 'node');
+        for (const el of nsNodes) nodes.push(readNode(el));
+        const nsSegs = xml.getElementsByTagNameNS(RH_NS, 'segment');
+        for (const el of nsSegs) {
+          if (el.getAttribute('startDist') != null) list.push(readSegment(el));
+        }
+
+        // fallback: localName
+        if (!list.length) {
+          for (const el of xml.getElementsByTagName('*')) {
+            if (el.localName === 'plan' && el.getAttribute('startTime')) startTime = el.getAttribute('startTime');
+            if (el.localName === 'node' && el.getAttribute('dist') != null) nodes.push(readNode(el));
+            if (el.localName === 'segment' && el.getAttribute('startDist') != null) list.push(readSegment(el));
+          }
+        }
+
+        if (!list.length) return null;
+        return {
+          startTime,
+          nodes: nodes.length ? nodes : undefined,
+          segments: list
+        };
       } catch (_) {
         return null;
       }
     }
-
     async function restoreOrInitPlan() {
       initSegmentsFromGpx();
       if (!state.currentGpxKey) return;
@@ -2974,11 +3133,8 @@
         alert('유효한 GPX가 아닙니다.');
         return;
       }
-      // rh 네임스페이스
-      gpxEl.setAttribute('xmlns:rh', 'https://gpx-riding-helper.local/ns');
-
-      // 기존 rh 확장 제거 후 재작성
-      xml.querySelectorAll('ridingHelper, rh\\:ridingHelper').forEach(n => n.remove());
+      const RH_NS = 'https://gpx-riding-helper.local/ns';
+      gpxEl.setAttribute('xmlns:rh', RH_NS);
 
       let trk = xml.querySelector('trk');
       if (!trk) {
@@ -2993,18 +3149,29 @@
         ext = xml.createElementNS(gpxEl.namespaceURI || 'http://www.topografix.com/GPX/1/1', 'extensions');
         trk.insertBefore(ext, trk.firstChild);
       }
-      // 기존 rh:ridingHelper 제거
       Array.from(ext.children).forEach(c => {
         if (c.localName === 'ridingHelper') ext.removeChild(c);
       });
 
-      const rh = xml.createElementNS('https://gpx-riding-helper.local/ns', 'rh:ridingHelper');
-      rh.setAttribute('version', '1');
-      const plan = xml.createElementNS('https://gpx-riding-helper.local/ns', 'rh:plan');
+      const rh = xml.createElementNS(RH_NS, 'rh:ridingHelper');
+      rh.setAttribute('version', '2');
+      const plan = xml.createElementNS(RH_NS, 'rh:plan');
       plan.setAttribute('startTime', state.planStartTime || '');
-      state.segments.forEach(s => {
-        const el = xml.createElementNS('https://gpx-riding-helper.local/ns', 'rh:segment');
-        el.setAttribute('id', s.id);
+
+      // 지점 (이름·거리·role)
+      (state.nodes || []).forEach(n => {
+        const el = xml.createElementNS(RH_NS, 'rh:node');
+        if (n.id) el.setAttribute('id', n.id);
+        el.setAttribute('name', n.name || '');
+        el.setAttribute('dist', String(n.dist != null ? n.dist : 0));
+        el.setAttribute('role', n.role || 'mid');
+        plan.appendChild(el);
+      });
+
+      // 구간 (목표시간·파워 등)
+      (state.segments || []).forEach(s => {
+        const el = xml.createElementNS(RH_NS, 'rh:segment');
+        if (s.id) el.setAttribute('id', s.id);
         el.setAttribute('name', s.name || '');
         el.setAttribute('startDist', String(s.startDist));
         el.setAttribute('endDist', String(s.endDist));
@@ -3017,6 +3184,7 @@
         if (s.note) el.setAttribute('note', s.note);
         plan.appendChild(el);
       });
+
       rh.appendChild(plan);
       ext.appendChild(rh);
 
@@ -3031,7 +3199,6 @@
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
     }
-
     // 차트에 구간 경계 세로선 표시
     function drawSegmentBoundaries(ctx, pad, viewMin, viewMax, viewSpan, cW, cH) {
       if (!state.segments || state.segments.length < 2) return;
@@ -3797,29 +3964,32 @@
 
     async function renderHistoryList() {
       const listEl = $('#history-list');
+      if (!listEl) return;
       const history = await getGpxHistory(30);
       if (!history.length) {
         listEl.innerHTML = '<p class="empty-message">저장된 GPX 기록이 없습니다.</p>';
         return;
       }
-      listEl.innerHTML = history.map(item => `
-        <div class="history-item" data-id="${item.id}">
+      listEl.innerHTML = history.map(item => {
+        const key = item.fileKey || gpxFileKey(item.name);
+        return `
+        <div class="history-item" data-key="${escapeHtml(key)}">
           <div class="info">
             <div class="name">${escapeHtml(item.name)}</div>
             <div class="meta">
               ${item.distance ? item.distance.toFixed(1) + 'km' : ''}
-              ${item.elevationGain ? ' · +' + Math.round(item.elevationGain) + 'm' : ''}
+              ${item.elevationGain != null ? ' · +' + Math.round(item.elevationGain) + 'm' : ''}
               · ${formatDate(item.loadedAt)}
             </div>
           </div>
-          <button class="delete-btn" data-id="${item.id}" title="삭제">🗑</button>
-        </div>
-      `).join('');
+          <button class="delete-btn" data-key="${escapeHtml(key)}" title="삭제">🗑</button>
+        </div>`;
+      }).join('');
 
       listEl.querySelectorAll('.history-item').forEach(el => {
         el.addEventListener('click', async (e) => {
-          if (e.target.classList.contains('delete-btn')) return;
-          const record = await getGpxById(Number(el.dataset.id));
+          if (e.target.closest('.delete-btn')) return;
+          const record = await getGpxByFileKey(el.dataset.key);
           if (record) {
             await loadGpxContent(record.content, record.name, false);
             closeModal('history-modal');
@@ -3829,14 +3999,12 @@
       listEl.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (confirm('이 GPX 기록을 삭제할까요?')) {
-            await deleteGpxFromHistory(Number(btn.dataset.id));
-            renderHistoryList();
-          }
+          if (!confirm('이 GPX와 연결된 큐시트 플랜을 함께 삭제할까요?')) return;
+          await deleteGpxFromHistory(btn.dataset.key);
+          renderHistoryList();
         });
       });
     }
-
     function escapeHtml(str) {
       const d = document.createElement('div');
       d.textContent = str;
