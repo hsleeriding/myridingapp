@@ -1,20 +1,4584 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>내 웹앱</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GPX 라이딩 헬퍼 - 분석 모드</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%; height: 100%; overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #1a1a1a; color: #e0e0e0;
+    }
+    #app { display: flex; flex-direction: column; width: 100%; height: 100%; }
+    #main-row {
+      display: flex; flex-direction: row; flex: 1 1 65%; min-height: 0;
+      position: relative;
+    }
+    #segment-sidebar {
+      flex: 0 0 0; width: 0; overflow: visible;
+      background: #1e1e1e; border-right: 1px solid #333;
+      display: flex; flex-direction: column;
+      transition: flex-basis 0.22s ease, width 0.22s ease;
+      min-height: 0; position: relative; z-index: 8;
+    }
+    #segment-sidebar.open { flex: 0 0 300px; width: 300px; }
+    #segment-sidebar.open.expanded { flex: 0 0 min(78vw, 1080px); width: min(78vw, 1080px); }
+    #segment-sidebar-inner {
+      display: flex; flex-direction: column; height: 100%;
+      width: 100%; min-width: 0; min-height: 0; overflow: hidden;
+    }
+    #seg-expand-btn {
+      position: absolute; top: 50%; right: -15px; transform: translateY(-50%);
+      z-index: 20; width: 15px; height: 48px; padding: 0;
+      border: 1px solid #555; border-left: none; border-radius: 0 6px 6px 0;
+      background: #2a2a2a; color: #bbb; cursor: pointer; font-size: 10px;
+      display: none; align-items: center; justify-content: center;
+      box-shadow: 2px 0 6px rgba(0,0,0,0.25);
+    }
+    #segment-sidebar.open #seg-expand-btn { display: flex; }
+    #seg-expand-btn:hover { background: #3a3a3a; color: #fff; }
+    #map-container { position: relative; flex: 1 1 auto; min-width: 0; min-height: 0; background: #2a2a2a; }
+    #map { width: 100%; height: 100%; }
+    #map-controls {
+      position: absolute; top: 12px; right: 12px; z-index: 10;
+      display: flex; gap: 8px;
+    }
+    #map-controls button {
+      width: 40px; height: 40px; border: none; border-radius: 8px;
+      background: rgba(30, 30, 30, 0.85); color: #fff; font-size: 18px;
+      cursor: pointer; backdrop-filter: blur(4px); transition: background 0.2s;
+    }
+    #map-controls button:hover { background: rgba(50, 50, 50, 0.95); }
+    #map-controls button.active { background: rgba(74, 158, 255, 0.85); }
+    #waypoint-panel {
+      position: absolute; top: 12px; left: 12px; bottom: 12px; z-index: 10;
+      width: 260px; max-width: calc(100% - 80px);
+      background: rgba(30, 30, 30, 0.92); backdrop-filter: blur(8px);
+      border-radius: 10px; border: 1px solid #444;
+      display: flex; flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      overflow: hidden;
+    }
+    #waypoint-panel.hidden { display: none; }
+    #waypoint-panel header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; border-bottom: 1px solid #3a3a3a; flex-shrink: 0;
+    }
+    #waypoint-panel header h3 { font-size: 14px; font-weight: 600; color: #e0e0e0; }
+    #waypoint-panel header .count { font-size: 12px; color: #888; margin-left: 6px; }
+    #waypoint-panel .wp-close {
+      background: none; border: none; color: #aaa; font-size: 20px;
+      cursor: pointer; line-height: 1; padding: 0 2px;
+    }
+    #waypoint-panel .wp-close:hover { color: #fff; }
+    #waypoint-list {
+      flex: 1; overflow-y: auto; padding: 6px 0;
+    }
+    #waypoint-list .wp-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 14px; cursor: pointer; transition: background 0.15s;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    #waypoint-list .wp-item:hover { background: rgba(74, 158, 255, 0.12); }
+    #waypoint-list .wp-item.active { background: rgba(74, 158, 255, 0.22); }
+    #waypoint-list .wp-num {
+      flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+      background: #4a9eff; color: #fff; font-size: 11px; font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #waypoint-list .wp-icon {
+      flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+    #waypoint-list .wp-icon svg {
+      width: 16px; height: 16px; display: block;
+    }
+    #waypoint-list .wp-info { flex: 1; min-width: 0; }
+    #waypoint-list .wp-name {
+      font-size: 13px; font-weight: 500; color: #e0e0e0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #waypoint-list .wp-meta {
+      font-size: 11px; color: #888; margin-top: 2px;
+    }
+    #waypoint-list .wp-desc {
+      font-size: 11px; color: #777; margin-top: 3px;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    #waypoint-list .empty-wp {
+      text-align: center; color: #666; font-size: 13px; padding: 24px 12px;
+    }
+    #map-status {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #2a2a2a; z-index: 5;
+    }
+    #map-status.hidden { display: none; }
+    .status-message { font-size: 16px; color: #aaa; }
+    #chart-container {
+      position: relative; flex: 0 0 35%; min-height: 200px;
+      background: #1e1e1e; border-top: 1px solid #333;
+      display: flex; flex-direction: column;
+      padding: 6px 10px 4px;
+    }
+    #chart-container.theme-light {
+      background: #f4f4f4; border-top: 1px solid #ccc;
+    }
+    #chart-container.theme-light #chart-placeholder { color: #888; }
+    #chart-container.theme-light #chart-toolbar button {
+      background: rgba(255,255,255,0.9); color: #333; border: 1px solid #ccc;
+    }
+    #chart-container.theme-light #chart-toolbar button:hover {
+      background: #fff; color: #000;
+    }
+    #chart-container.theme-light #minimap-wrap { border-top-color: #ccc; }
+    #chart-main-wrap {
+      position: relative; flex: 1 1 auto; min-height: 0;
+    }
+    #chart-placeholder {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: #666; font-size: 14px; pointer-events: none;
+    }
+    #chart-placeholder.hidden { display: none; }
+    #elevation-chart {
+      width: 100%; height: 100%; display: block; cursor: crosshair;
+      user-select: none; -webkit-user-drag: none;
+    }
+    #minimap-canvas {
+      user-select: none; -webkit-user-drag: none;
+    }
+    #chart-tooltip {
+      position: absolute;
+      pointer-events: none;
+      z-index: 20;
+      background: rgba(20, 20, 20, 0.92);
+      border: 1px solid #555;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: #e0e0e0;
+      white-space: nowrap;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.45);
+      display: none;
+    }
+    #chart-tooltip .tt-row { display: flex; gap: 8px; }
+    #chart-tooltip .tt-label { color: #888; min-width: 36px; }
+    #chart-tooltip .tt-val { font-weight: 500; color: #fff; }
+    #chart-toolbar {
+      position: absolute; top: 6px; right: 8px; z-index: 12;
+      display: flex; gap: 6px;
+    }
+    #chart-toolbar button {
+      height: 28px; padding: 0 10px; border: none; border-radius: 6px;
+      background: rgba(30,30,30,0.88); color: #ddd; font-size: 12px;
+      cursor: pointer; backdrop-filter: blur(4px);
+    }
+    #chart-toolbar button:hover { background: rgba(55,55,55,0.95); color: #fff; }
+    #compare-overlay {
+      position: fixed; inset: 0; z-index: 2000;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #compare-overlay.hidden { display: none; }
+    #compare-panel {
+      background: #222; border-radius: 12px; width: min(1100px, 96vw);
+      max-height: 92vh; display: flex; flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    }
+    #compare-panel header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 18px; border-bottom: 1px solid #3a3a3a;
+    }
+    #compare-panel header h2 { font-size: 16px; }
+    #compare-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; padding: 14px; overflow-y: auto;
+    }
+    .compare-card {
+      background: #1a1a1a; border-radius: 8px; border: 1px solid #333;
+      padding: 10px;
+    }
+    .compare-card h3 {
+      font-size: 13px; font-weight: 600; color: #ccc; margin-bottom: 6px;
+    }
+    .compare-card p {
+      font-size: 11px; color: #777; margin-bottom: 8px; line-height: 1.4;
+    }
+    .compare-card canvas {
+      width: 100%; height: 140px; display: block; background: #1e1e1e; border-radius: 4px;
+    }
+    .compare-card .apply-btn {
+      margin-top: 8px; width: 100%;
+      padding: 8px; border: 1px solid #4a9eff; border-radius: 6px;
+      background: transparent; color: #4a9eff; font-size: 12px; cursor: pointer;
+    }
+    .compare-card .apply-btn:hover { background: rgba(74,158,255,0.15); }
+    #chart-selection {
+      position: absolute; top: 0; bottom: 0;
+      background: rgba(74, 158, 255, 0.2);
+      border: 1px solid rgba(74, 158, 255, 0.6);
+      pointer-events: none;
+      display: none;
+      z-index: 15;
+    }
+    #minimap-wrap {
+      flex: 0 0 32px;
+      position: relative;
+      margin-top: 4px;
+      border-top: 1px solid #333;
+      padding-top: 4px;
+    }
+    #minimap-wrap.hidden { display: none; }
+    #minimap-canvas {
+      width: 100%; height: 28px; display: block; cursor: default;
+    }
+    .modal {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .modal.hidden { display: none; }
+    .modal-content {
+      background: #2a2a2a; border-radius: 12px;
+      width: 90%; max-width: 520px; max-height: 85vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid #3a3a3a;
+    }
+    .modal-header h2 { font-size: 18px; font-weight: 600; }
+    .modal-close {
+      background: none; border: none; color: #aaa; font-size: 24px;
+      cursor: pointer; line-height: 1; padding: 0 4px;
+    }
+    .modal-close:hover { color: #fff; }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .modal-footer {
+      padding: 16px 20px; border-top: 1px solid #3a3a3a;
+      display: flex; justify-content: flex-end; gap: 10px;
+    }
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      display: block; margin-bottom: 6px;
+      font-size: 14px; font-weight: 500; color: #ccc;
+    }
+    .form-group input[type="text"],
+    .form-group select {
+      width: 100%; padding: 10px 12px;
+      border: 1px solid #444; border-radius: 6px;
+      background: #1a1a1a; color: #e0e0e0; font-size: 14px;
+    }
+    .form-group input[type="text"]:focus,
+    .form-group select:focus { outline: none; border-color: #4a9eff; }
+    .form-group select { cursor: pointer; }
+    .form-row { display: flex; gap: 12px; }
+    .form-row .form-group { flex: 1; }
+    .help-text { margin-top: 6px; font-size: 12px; color: #777; }
+    .section-title {
+      font-size: 13px; font-weight: 600; color: #4a9eff;
+      margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #333;
+    }
+    .section-title:first-child { margin-top: 0; }
+    .btn-primary {
+      padding: 10px 20px; border: none; border-radius: 6px;
+      background: #4a9eff; color: #fff; font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #3a8aef; }
+    .btn-secondary {
+      padding: 10px 20px; border: 1px solid #555; border-radius: 6px;
+      background: transparent; color: #ccc; font-size: 14px; cursor: pointer;
+    }
+    .btn-secondary:hover { background: #333; }
+    .upload-area {
+      text-align: center; margin-bottom: 20px; padding-bottom: 16px;
+      border-bottom: 1px solid #3a3a3a;
+    }
+    #history-list { max-height: 300px; overflow-y: auto; }
+    .history-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px; border-radius: 6px; cursor: pointer; transition: background 0.15s;
+    }
+    .history-item:hover { background: #333; }
+    .history-item .info { flex: 1; }
+    .history-item .name { font-size: 14px; font-weight: 500; }
+    .history-item .meta { font-size: 12px; color: #888; margin-top: 2px; }
+    .history-item .delete-btn {
+      background: none; border: none; color: #888; font-size: 16px;
+      cursor: pointer; padding: 4px 8px;
+    }
+    .history-item .delete-btn:hover { color: #ff6b6b; }
+    .empty-message { text-align: center; color: #666; font-size: 14px; padding: 20px 0; }
+
+    /* 구간 사이드바 — 단일 테이블, 확장 시 열 추가 */
+    #segment-sidebar-inner > header {
+      display: flex; align-items: flex-start; gap: 8px;
+      padding: 10px 12px; border-bottom: 1px solid #3a3a3a; flex-shrink: 0;
+    }
+    #segment-sidebar-inner > header .seg-header-info { flex: 1; min-width: 0; }
+    #segment-sidebar-inner > header .seg-route-name {
+      font-size: 13px; font-weight: 600; color: #e0e0e0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    #segment-sidebar-inner > header .seg-route-meta {
+      font-size: 11px; color: #888; margin-top: 2px;
+    }
+    #segment-sidebar-inner .seg-close {
+      background: none; border: none; color: #aaa; font-size: 20px;
+      cursor: pointer; line-height: 1; padding: 0 2px; flex-shrink: 0;
+    }
+    #segment-sidebar-inner .seg-close:hover { color: #fff; }
+    #btn-add-node {
+      flex-shrink: 0;
+      width: 28px; height: 28px; padding: 0;
+      border: 1px solid #555; border-radius: 6px;
+      background: #2a2a2a; color: #ddd; font-size: 16px; line-height: 1;
+      cursor: pointer;
+    }
+    #btn-add-node:hover { background: #3a3a3a; color: #fff; border-color: #4a9eff; }
+    #seg-table input.dist-input {
+      width: 100%; min-width: 48px; max-width: 72px;
+      background: #111; border: 1px solid #444; color: #e0e0e0;
+      border-radius: 4px; padding: 3px 6px; font-size: 12px;
+      text-align: right;
+    }
+    #seg-table input.dist-input:focus { outline: none; border-color: #4a9eff; }
+    #segment-sidebar-inner > header .seg-route-meta-row {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-top: 2px; min-height: 22px;
+    }
+    #segment-sidebar-inner .cs-start-wrap {
+      display: none; align-items: center; gap: 4px; font-size: 11px; color: #aaa;
+      white-space: nowrap;
+    }
+    #segment-sidebar.open.expanded .cs-start-wrap { display: inline-flex; }
+    #segment-sidebar-inner .cs-start-wrap input {
+      background: #111; border: 1px solid #444; color: #e0e0e0;
+      border-radius: 4px; padding: 2px 6px; font-size: 11px;
+    }
+    #seg-table th {
+      white-space: normal; line-height: 1.2; max-width: 52px;
+      text-align: center; font-size: 11px; padding: 6px 4px;
+    }
+    #seg-table th.th-name { max-width: 100px; text-align: left; }
+    #seg-table th.th-act { max-width: 48px; }
+    #seg-table td.num, #seg-table td.readonly { text-align: right; }
+    #seg-table input { text-align: right; }
+    #seg-table input.name-input, #seg-table input.note-input { text-align: left; }
+    #seg-table-wrap { flex: 1; overflow: auto; min-height: 0; }
+    #seg-table {
+      width: 100%; border-collapse: collapse; font-size: 12px;
+    }
+    #seg-table th {
+      position: sticky; top: 0; z-index: 1;
+      background: #252525; color: #999; font-weight: 600;
+      border-bottom: 1px solid #3a3a3a;
+      white-space: normal; line-height: 1.2; font-size: 11px;
+      padding: 6px 4px; text-align: center;
+    }
+    #seg-table td { white-space: nowrap; }
+
+    #seg-table td {
+      padding: 5px 6px; border-bottom: 1px solid #2a2a2a; vertical-align: middle;
+    }
+    /*
+      지점 행끼리 왼쪽(이름·거리·고도)은 빈 줄 없이 붙고,
+      구간 속성은 그 사이 높이의 오른쪽에만 걸침 (0.5 / 1.5층).
+    */
+    #seg-table { border-collapse: collapse; }
+    #seg-table tr.node-row { cursor: pointer; }
+    #seg-table tr.node-row > td {
+      padding-top: 5px;
+      padding-bottom: 5px;
+      border-bottom: none;
+      vertical-align: middle;
+    }
+    #seg-table tr.node-row:hover > td { background: rgba(74,158,255,0.08); }
+    #seg-table tr.node-row.active > td { background: rgba(74,158,255,0.16); }
+    /* 구간: 노드 사이 — 왼쪽 칸은 비우고 투명, 오른쪽만 반줄 */
+    #seg-table tr.seg-between {
+      cursor: pointer;
+    }
+    #seg-table tr.seg-between > td {
+      padding-top: 1px;
+      padding-bottom: 1px;
+      font-size: 11px;
+      line-height: 1.2;
+      vertical-align: middle;
+      color: #b0b8c0;
+      border-top: 1px dashed #3a3a3a;
+      border-bottom: 1px dashed #3a3a3a;
+      background: #181818;
+    }
+    #seg-table tr.seg-between:hover > td.seg-side {
+      background: rgba(74,158,255,0.14);
+    }
+    #seg-table tr.seg-between.active > td.seg-side {
+      background: rgba(74,158,255,0.24);
+    }
+    #seg-table tr.seg-between > td.node-side {
+      background: transparent !important;
+      border-top: none !important;
+      border-bottom: none !important;
+      padding: 0 !important;
+      /* 왼쪽은 높이만 행에 맞추고 내용 없음 → 지점 이름끼리 붙어 보임 */
+    }
+    #seg-table tr.seg-between > td.seg-side {
+      background: #181818;
+    }
+    #seg-table tr.seg-between input {
+      font-size: 11px;
+      padding: 0 4px;
+      height: 18px;
+      min-height: 18px;
+      background: #101010;
+      border: 1px solid #333;
+    }
+    #seg-table tr.seg-between .half-idx {
+      font-size: 9px;
+      color: #666;
+    }
+    #seg-table tr.rest-between > td {
+      padding-top: 1px;
+      padding-bottom: 1px;
+      font-size: 11px;
+      color: #c4b5fd;
+      border-top: 1px dashed #5b4a8a;
+      border-bottom: 1px dashed #5b4a8a;
+      background: rgba(139,92,246,0.08);
+    }
+    #seg-table tr.rest-between > td.node-side {
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+    }
+    #seg-table tr.rest-between input {
+      font-size: 11px; padding: 0 4px; height: 18px;
+      background: #111; border: 1px solid #5b4a8a; color: #e0e0e0; border-radius: 3px;
+    }
+    #seg-table td.cell-muted { color: #444 !important; }
+    #seg-table .col-x { display: none; }
+    #segment-sidebar.open.expanded #seg-table .col-x { display: table-cell; }
+    #seg-table input {
+      width: 100%; min-width: 48px; max-width: 120px;
+      background: #111; border: 1px solid #444; color: #e0e0e0;
+      border-radius: 4px; padding: 3px 6px; font-size: 12px;
+      /* number 스피너 숨김 (type=number 대비) */
+      -moz-appearance: textfield;
+    }
+    #seg-table input::-webkit-outer-spin-button,
+    #seg-table input::-webkit-inner-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    #seg-table input.name-input { min-width: 72px; max-width: 140px; }
+    #seg-table input.note-input { min-width: 100px; max-width: 180px; }
+    #seg-table input:focus { outline: none; border-color: #4a9eff; }
+    #seg-table .readonly { color: #9ab; font-variant-numeric: tabular-nums; }
+    #seg-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+    #seg-table .act-btns { display: flex; gap: 2px; }
+    #seg-table .act-btns button {
+      width: 22px; height: 22px; padding: 0; border: none; border-radius: 4px;
+      background: transparent; color: #aaa; cursor: pointer; font-size: 13px;
+      line-height: 1;
+    }
+    #seg-table .act-btns button:hover { background: #333; color: #fff; }
+    #seg-table .act-btns button:disabled { opacity: 0.25; cursor: default; }
+    #seg-table .act-btns button:disabled:hover { background: transparent; color: #aaa; }
+    #seg-table .empty-seg {
+      text-align: center; color: #666; font-size: 13px; padding: 24px 12px;
+    }
+    /* 큐시트 헤더 저장 상태 */
+    #cs-save-status {
+      margin-top: 4px;
+      font-size: 11px;
+      line-height: 1.3;
+      color: #777;
+      min-height: 1.3em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #cs-save-status.is-dirty { color: #eab308; }
+    #cs-save-status.is-saving { color: #94a3b8; }
+    #cs-save-status.is-saved { color: #4ade80; }
+    #cs-save-status.is-error { color: #f87171; }
+    #cs-save-status.is-idle { color: #666; }
+    /* 도착·목표속력 열 너비 고정 */
+    #seg-table th.th-arrive,
+    #seg-table td.col-arrive {
+      min-width: 4.5em;
+      width: 4.5em;
+      max-width: 5em;
+      box-sizing: border-box;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+    }
+    #seg-table th.th-speed,
+    #seg-table td.col-speed {
+      min-width: 4em;
+      width: 4em;
+      max-width: 4.5em;
+      box-sizing: border-box;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      font-feature-settings: "tnum";
+    }
+
+    /* 차트 컨텍스트 메뉴 */
+    #chart-ctx-menu {
+      position: fixed; z-index: 3000;
+      min-width: 180px;
+      background: #2a2a2a; border: 1px solid #555; border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      padding: 4px 0; display: none;
+    }
+    #chart-ctx-menu button {
+      display: block; width: 100%; text-align: left;
+      padding: 9px 14px; border: none; background: none;
+      color: #e0e0e0; font-size: 13px; cursor: pointer;
+    }
+    #chart-ctx-menu button:hover { background: rgba(74, 158, 255, 0.2); color: #fff; }
+    #chart-ctx-menu button:disabled { color: #666; cursor: default; }
+    #chart-ctx-menu button:disabled:hover { background: none; }
+    #chart-ctx-menu .ctx-sep {
+      height: 1px; background: #444; margin: 4px 0;
+    }
+
+    /* 로드뷰 오버레이 */
+    #roadview-overlay {
+      position: fixed; inset: 0; z-index: 2500;
+      background: rgba(0,0,0,0.75);
+      display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #roadview-overlay.hidden { display: none; }
+    #roadview-panel {
+      background: #222; border-radius: 12px; width: min(900px, 96vw);
+      height: min(560px, 85vh); display: flex; flex-direction: column;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.5); overflow: hidden;
+    }
+    #roadview-panel header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; border-bottom: 1px solid #3a3a3a; flex-shrink: 0;
+    }
+    #roadview-panel header h2 { font-size: 15px; }
+    #roadview-panel header .rv-meta { font-size: 12px; color: #888; margin-left: 10px; }
+    #roadview-body {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+      width: 100%;
+    }
+    /* Roadview 생성 시 컨테이너 실제 픽셀 크기가 필요 */
+    #roadview-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      background: #111;
+    }
+    #roadview-status {
+      position: absolute; inset: 0; z-index: 5;
+      display: flex; align-items: center; justify-content: center;
+      color: #aaa; font-size: 14px; pointer-events: none;
+      background: rgba(17,17,17,0.55);
+    }
+    #roadview-status.hidden { display: none; }
+
+    /* ===== 라이딩(감지) 모드 ===== */
+    #ride-mode {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 5000;
+      background: #0d0d0d;
+      color: #e8e8e8;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #ride-mode.open { display: flex; }
+    #ride-mode .rm-top {
+      flex-shrink: 0;
+      padding: 10px 14px 8px;
+      padding-top: max(10px, env(safe-area-inset-top));
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    #ride-mode .rm-title { font-weight: 700; font-size: 15px; flex: 1; }
+    #ride-mode .rm-status { font-size: 11px; color: #888; text-align: right; }
+    #ride-mode .rm-status.ok { color: #4ade80; }
+    #ride-mode .rm-status.warn { color: #fbbf24; }
+    #ride-mode .rm-status.err { color: #f87171; }
+    #ride-mode .rm-body {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 12px 14px 20px;
+      padding-bottom: max(20px, env(safe-area-inset-bottom));
+    }
+    #ride-mode .rm-card {
+      background: #1a1a1a;
+      border: 1px solid #2e2e2e;
+      border-radius: 12px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+    #ride-mode .rm-card h3 {
+      margin: 0 0 10px;
+      font-size: 12px;
+      color: #8ab4f8;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    #ride-mode .rm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 12px;
+    }
+    #ride-mode .rm-metric label {
+      display: block;
+      font-size: 10px;
+      color: #777;
+      margin-bottom: 2px;
+    }
+    #ride-mode .rm-metric .val {
+      font-size: 20px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      color: #f0f0f0;
+      line-height: 1.2;
+    }
+    #ride-mode .rm-metric .val small {
+      font-size: 12px;
+      font-weight: 500;
+      color: #999;
+      margin-left: 2px;
+    }
+    #ride-mode .rm-seg-name {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    #ride-mode .rm-progress {
+      height: 8px;
+      background: #2a2a2a;
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 8px 0 12px;
+    }
+    #ride-mode .rm-progress > span {
+      display: block;
+      height: 100%;
+      background: linear-gradient(90deg, #4a9eff, #22c55e);
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.35s ease;
+    }
+    #ride-mode .rm-targets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    #ride-mode .rm-chip {
+      background: #222;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+    }
+    #ride-mode .rm-chip strong { color: #4a9eff; }
+    #ride-mode .rm-chip.warn strong { color: #fbbf24; }
+    #ride-mode .rm-chip.hr strong { color: #f472b6; }
+    #ride-mode canvas.rm-elev {
+      width: 100%;
+      height: 72px;
+      display: block;
+      background: #111;
+      border-radius: 8px;
+      margin-top: 8px;
+    }
+    #ride-mode .rm-actions {
+      flex-shrink: 0;
+      display: flex;
+      gap: 8px;
+      padding: 10px 14px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid #2a2a2a;
+      background: #141414;
+    }
+    #ride-mode .rm-actions button {
+      flex: 1;
+      padding: 14px 8px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    #ride-mode #rm-btn-refresh { background: #4a9eff; color: #fff; }
+    #ride-mode #rm-btn-exit { background: #2a2a2a; color: #ccc; flex: 0.55; }
+    #ride-mode .rm-interval {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 8px;
+      font-size: 12px;
+      color: #999;
+    }
+    #ride-mode .rm-interval select {
+      background: #222;
+      color: #eee;
+      border: 1px solid #444;
+      border-radius: 6px;
+      padding: 4px 8px;
+    }
+    #ride-mode .rm-off-route { color: #fbbf24; font-size: 13px; margin-top: 6px; }
+    #btn-ride-mode { display: none; }
+
+  </style>
 </head>
 <body>
-    <h1>안녕하세요!</h1>
-    <p>GitHub Pages에서 실행 중입니다.</p>
+  
+  <div id="ride-mode" aria-hidden="true">
+    <div class="rm-top">
+      <div class="rm-title">라이딩 감지</div>
+      <div class="rm-status" id="rm-status">대기</div>
+    </div>
+    <div class="rm-body">
+      <div class="rm-card">
+        <h3>전체 코스</h3>
+        <div class="rm-grid">
+          <div class="rm-metric"><label>진행 거리</label><div class="val" id="rm-dist">—<small>km</small></div></div>
+          <div class="rm-metric"><label>현재 고도</label><div class="val" id="rm-ele">—<small>m</small></div></div>
+          <div class="rm-metric"><label>남은 획고</label><div class="val" id="rm-rem-gain">—<small>m</small></div></div>
+          <div class="rm-metric"><label>남은 거리</label><div class="val" id="rm-rem-dist">—<small>km</small></div></div>
+        </div>
+        <div class="rm-progress"><span id="rm-course-prog"></span></div>
+      </div>
+      <div class="rm-card">
+        <h3>현재 구간</h3>
+        <div class="rm-seg-name" id="rm-seg-name">—</div>
+        <div class="rm-progress"><span id="rm-seg-prog"></span></div>
+        <div class="rm-grid">
+          <div class="rm-metric"><label>구간 위치</label><div class="val" id="rm-seg-pos">—</div></div>
+          <div class="rm-metric"><label>구간 남은 획고</label><div class="val" id="rm-seg-gain">—<small>m</small></div></div>
+          <div class="rm-metric"><label>남은 시간</label><div class="val" id="rm-seg-rem-time">—</div></div>
+          <div class="rm-metric"><label>목표 도착</label><div class="val" id="rm-seg-eta">—</div></div>
+        </div>
+        <div class="rm-targets" id="rm-targets"></div>
+        <canvas class="rm-elev" id="rm-elev-canvas" width="400" height="72"></canvas>
+        <div class="rm-off-route" id="rm-off-route" style="display:none;"></div>
+      </div>
+      <div class="rm-card">
+        <h3>갱신 설정</h3>
+        <div class="rm-interval">
+          <span>자동 주기</span>
+          <select id="rm-interval">
+            <option value="0">수동만</option>
+            <option value="30">30초</option>
+            <option value="60" selected>1분</option>
+            <option value="120">2분</option>
+            <option value="300">5분</option>
+          </select>
+        </div>
+        <p style="margin-top:8px;color:#666;font-size:11px;line-height:1.4;">
+          화면이 다시 보일 때 · 수동 새로고침 · 설정한 주기에만 GPS를 읽습니다. 운동 기록이 아닙니다.
+        </p>
+      </div>
+    </div>
+    <div class="rm-actions">
+      <button type="button" id="rm-btn-exit">분석으로</button>
+      <button type="button" id="rm-btn-refresh">위치 갱신</button>
+    </div>
+  </div>
 
-    <button onclick="hello()">클릭</button>
+  <div id="app">
+    <div id="main-row">
+      <aside id="segment-sidebar">
+        <div id="segment-sidebar-inner">
+          <header>
+            <div class="seg-header-info">
+              <div class="seg-route-name" id="seg-route-name">—</div>
+              <div class="seg-route-meta-row">
+                <span class="seg-route-meta" id="seg-route-meta"></span>
+                <label class="cs-start-wrap">출발
+                  <input type="time" id="cs-start-time" step="60">
+                </label>
+              </div>
+              <div id="cs-save-status" class="is-idle" aria-live="polite">저장 대기</div>
+            </div>
+            <button type="button" id="btn-add-node" class="btn-add-node" title="지점 추가">＋</button>
+            <button class="seg-close" id="btn-close-seg" type="button" title="닫기">&times;</button>
+          </header>
+          <div id="seg-table-wrap">
+            <table id="seg-table">
+              <thead>
+                <tr>
+                  <th class="th-act"></th>
+                  <th>#</th>
+                  <th class="th-name">이름</th>
+                  <th>거리</th>
+                  <th>고도</th>
+                  <th class="col-x">이동<br>거리</th>
+                  <th class="col-x">고도<br>차</th>
+                  <th class="col-x">획득<br>고도</th>
+                  <th class="col-x">목표<br>시간</th>
+                  <th class="col-x th-arrive">시각</th>
+                  <th class="col-x th-speed">목표<br>속력</th>
+                  <th class="col-x">목표<br>파워</th>
+                  <th class="col-x">제한<br>파워</th>
+                  <th class="col-x">목표<br>심박</th>
+                  <th class="col-x">제한<br>심박</th>
+                  <th class="col-x th-name">비고</th>
+                </tr>
+              </thead>
+              <tbody id="seg-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+        <button type="button" id="seg-expand-btn" title="상세 열 펼치기/접기">▶</button>
+      </aside>
+      <div id="map-container">
+        <div id="map"></div>
+        <div id="map-controls">
+          <button id="btn-export-gpx" title="구간·큐시트 포함 GPX 내보내기" style="display:none;">📤</button>
+          <button id="btn-segments" title="구간 목록" style="display:none;">✂️</button>
+          <button id="btn-waypoints" title="웨이포인트 목록" style="display:none;">📍</button>
+          <button id="btn-ride-mode" title="라이딩 감지 모드">🚴</button>
+          <button id="btn-settings" title="앱 설정">⚙️</button>
+          <button id="btn-history" title="GPX 히스토리">📁</button>
+        </div>
+        <div id="waypoint-panel" class="hidden">
+          <header>
+            <h3>웨이포인트 <span class="count" id="wp-count"></span></h3>
+            <button class="wp-close" id="btn-close-wp" type="button" title="닫기">&times;</button>
+          </header>
+          <div id="waypoint-list"></div>
+        </div>
+        <div id="map-status">
+          <div class="status-message">초기화 중...</div>
+        </div>
+      </div>
+    </div>
+    <div id="chart-container">
+      <div id="chart-main-wrap">
+        <div id="chart-placeholder">GPX 파일을 불러오면 거리-고도 그래프가 표시됩니다.</div>
+        <canvas id="elevation-chart"></canvas>
+        <div id="chart-selection"></div>
+        <div id="chart-tooltip"></div>
+        <div id="chart-toolbar">
+          <button id="btn-chart-theme" type="button" title="차트 배경 전환">배경</button>
+          <button id="btn-compare-area" type="button" title="영역 색칠 방식 비교">영역 비교</button>
+        </div>
+      </div>
+      <div id="minimap-wrap" class="hidden">
+        <canvas id="minimap-canvas"></canvas>
+      </div>
+    </div>
+  </div>
 
-    <script>
-        function hello() {
-            alert("웹앱이 정상적으로 실행되고 있습니다!");
+  <!-- 영역 색칠 비교 오버레이 -->
+  <div id="compare-overlay" class="hidden">
+    <div id="compare-panel">
+      <header>
+        <h2>영역 색칠 방식 비교 <span id="compare-params" style="font-size:12px;color:#888;font-weight:400;"></span></h2>
+        <button class="modal-close" id="btn-close-compare" type="button">&times;</button>
+      </header>
+      <div id="compare-grid"></div>
+    </div>
+  </div>
+
+  <div id="settings-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>앱 설정</h2>
+        <button class="modal-close" data-modal="settings-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="section-title">API 키</div>
+        <div class="form-group">
+          <label for="kakao-api-key">카카오맵 API 키</label>
+          <input type="text" id="kakao-api-key" placeholder="JavaScript 키를 입력하세요">
+          <p class="help-text">카카오 개발자 콘솔에서 발급받은 JavaScript 키</p>
+        </div>
+        <div class="form-group">
+          <label for="weather-api-key">기상청 API 키</label>
+          <input type="text" id="weather-api-key" placeholder="기상청 API 키 (선택)">
+          <p class="help-text">나중에 날씨 정보 표시용 (선택 사항)</p>
+        </div>
+
+        <div class="section-title">고도 그래프 - 경사 표시 (스트라바 스타일)</div>
+        <div class="form-group">
+          <label for="grade-style">표시 방식</label>
+          <select id="grade-style">
+            <option value="none">없음 (단일 색상)</option>
+            <option value="line">라인 색칠 (상승=빨강 / 하강=파랑)</option>
+            <option value="area">영역 색칠 (상승=빨강 / 하강=파랑)</option>
+            <option value="both">라인 + 영역 모두 색칠</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="area-color-mode">영역 색칠 공식</label>
+          <select id="area-color-mode">
+            <option value="blend">RGB 블렌드</option>
+            <option value="pure-alpha">순수 빨강/파랑 + 불투명도</option>
+            <option value="pure-alpha-floor">순수 빨강/파랑 + 불투명도(하한)</option>
+            <option value="heat">히트맵 (상승만 강조)</option>
+          </select>
+          <p class="help-text">영역 채우기에 적용. 그래프의 「영역 비교」로 한눈에 비교 가능</p>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="grade-deadzone">평지 데드존 (%)</label>
+            <select id="grade-deadzone">
+              <option value="0.1">0.1%</option>
+              <option value="0.2" selected>0.2%</option>
+              <option value="0.3">0.3%</option>
+              <option value="0.5">0.5%</option>
+            </select>
+            <p class="help-text">이보다 작은 경사는 평지</p>
+          </div>
+          <div class="form-group">
+            <label for="grade-k">감도 k (반포화 경사)</label>
+            <select id="grade-k">
+              <option value="2">2% (민감)</option>
+              <option value="3">3%</option>
+              <option value="4" selected>4% (권장)</option>
+              <option value="6">6%</option>
+              <option value="8">8% (둔감)</option>
+            </select>
+            <p class="help-text">t = g'/(g'+k), k에서 약 50%</p>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="resample-dist">리샘플링 간격 (m)</label>
+            <select id="resample-dist">
+              <option value="10">10m</option>
+              <option value="20" selected>20m</option>
+              <option value="30">30m</option>
+              <option value="50">50m</option>
+              <option value="100">100m</option>
+            </select>
+            <p class="help-text">포인트 균일화 간격</p>
+          </div>
+          <div class="form-group">
+            <label for="smooth-window">고도 스무딩 윈도우</label>
+            <select id="smooth-window">
+              <option value="0">사용 안 함</option>
+              <option value="3">3</option>
+              <option value="5" selected>5</option>
+              <option value="7">7</option>
+              <option value="9">9</option>
+            </select>
+            <p class="help-text">이동평균 포인트 수</p>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="grade-window">경사 계산 윈도우 (m)</label>
+          <select id="grade-window">
+            <option value="40">40m</option>
+            <option value="60" selected>60m</option>
+            <option value="80">80m</option>
+            <option value="100">100m</option>
+            <option value="120">120m</option>
+          </select>
+          <p class="help-text">넓은 구간으로 경사 계산 → 노이즈 감소 (스트라바 스타일)</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="btn-primary">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 차트 우클릭 컨텍스트 메뉴 (항목 추가 가능) -->
+  <div id="chart-ctx-menu" role="menu">
+    <button type="button" data-action="split-segment">이 지점에 노드(지점) 추가</button>
+    <button type="button" data-action="roadview">이 지점 카카오 로드뷰</button>
+    <!-- 나중에 메뉴 항목 추가: data-action="..." -->
+  </div>
+
+  <!-- 로드뷰 오버레이 -->
+  <div id="roadview-overlay" class="hidden">
+    <div id="roadview-panel">
+      <header>
+        <div style="display:flex;align-items:center;">
+          <h2>로드뷰</h2>
+          <span class="rv-meta" id="roadview-meta"></span>
+        </div>
+        <button class="modal-close" id="btn-close-roadview" type="button">&times;</button>
+      </header>
+      <div id="roadview-body">
+        <div id="roadview-container"></div>
+        <div id="roadview-status" class="hidden">로드뷰를 불러오는 중...</div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="add-node-modal" class="modal hidden">
+    <div class="modal-content" style="max-width:420px;">
+      <div class="modal-header">
+        <h2>지점 추가</h2>
+        <button class="modal-close" data-modal="add-node-modal" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="add-node-name">이름</label>
+          <input type="text" id="add-node-name" value="새 지점" placeholder="지점 이름">
+        </div>
+        <div class="form-group">
+          <label for="add-node-dist">거리 (km)</label>
+          <input type="text" inputmode="decimal" id="add-node-dist" placeholder="0.0">
+          <p class="help-text" id="add-node-dist-hint">허용 범위: —</p>
+          <p class="help-text" id="add-node-dist-error" style="color:#f87171;display:none;"></p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-secondary modal-close" data-modal="add-node-modal">취소</button>
+        <button type="button" id="btn-confirm-add-node" class="btn-primary">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="history-modal" class="modal hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>GPX 히스토리</h2>
+        <button class="modal-close" data-modal="history-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-area">
+          <input type="file" id="gpx-file-input" accept=".gpx" hidden>
+          <button id="btn-upload-gpx" class="btn-primary">GPX 파일 첨부</button>
+          <p class="help-text">또는 아래에서 이전 기록을 선택하세요</p>
+        </div>
+        <div id="history-list">
+          <p class="empty-message">저장된 GPX 기록이 없습니다.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary modal-close" data-modal="history-modal">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const DB_NAME = 'GpxRidingHelper';
+    const DB_VERSION = 2;
+    const STORE_SETTINGS = 'settings';
+    const STORE_GPX_HISTORY = 'gpxHistory';
+    const STORE_PLANS = 'ridingPlans';
+    let db = null;
+    let planSaveTimer = null;
+
+    function initDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => { db = request.result; resolve(db); };
+        request.onupgradeneeded = (event) => {
+          const database = event.target.result;
+          if (!database.objectStoreNames.contains(STORE_SETTINGS)) {
+            database.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+          }
+          if (!database.objectStoreNames.contains(STORE_GPX_HISTORY)) {
+            const store = database.createObjectStore(STORE_GPX_HISTORY, { keyPath: 'id', autoIncrement: true });
+            store.createIndex('loadedAt', 'loadedAt', { unique: false });
+          }
+          if (!database.objectStoreNames.contains(STORE_PLANS)) {
+            database.createObjectStore(STORE_PLANS, { keyPath: 'gpxKey' });
+          }
+        };
+      });
+    }
+
+    function savePlanToDB(plan) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_PLANS, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('plan tx error'));
+        tx.onabort = () => reject(tx.error || new Error('plan tx aborted'));
+        const req = tx.objectStore(STORE_PLANS).put(plan);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function getPlanFromDB(gpxKey) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_PLANS, 'readonly');
+        const req = tx.objectStore(STORE_PLANS).get(gpxKey);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function gpxContentKey(content, name) {
+      // 내용 기반 키 (파일명 무시 → 같은 GPX면 이름 달라도 동일 키)
+      // 샘플 + 길이 + 간단 롤링 해시로 충돌 가능성 낮춤
+      const c = content || '';
+      const len = c.length;
+      const head = c.slice(0, 400);
+      const mid = len > 800 ? c.slice((len >> 1) - 100, (len >> 1) + 100) : '';
+      const tail = c.slice(-200);
+      let h = 2166136261;
+      const s = len + '|' + head + '|' + mid + '|' + tail;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return 'gpx_' + (h >>> 0).toString(16) + '_' + len.toString(16);
+    }
+
+    function saveSetting(key, value) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_SETTINGS, 'readwrite');
+        const req = tx.objectStore(STORE_SETTINGS).put({ key, value });
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function getSetting(key) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_SETTINGS, 'readonly');
+        const req = tx.objectStore(STORE_SETTINGS).get(key);
+        req.onsuccess = () => resolve(req.result ? req.result.value : null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function getSettings(keys) {
+      const result = {};
+      for (const key of keys) result[key] = await getSetting(key);
+      return result;
+    }
+
+    function saveGpxToHistory(gpxData) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_GPX_HISTORY, 'readwrite');
+        const record = {
+          name: gpxData.name, content: gpxData.content,
+          distance: gpxData.distance || null,
+          elevationGain: gpxData.elevationGain || null,
+          pointCount: gpxData.pointCount || null,
+          loadedAt: Date.now()
+        };
+        const req = tx.objectStore(STORE_GPX_HISTORY).add(record);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function getGpxHistory(limit = 20) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_GPX_HISTORY, 'readonly');
+        const index = tx.objectStore(STORE_GPX_HISTORY).index('loadedAt');
+        const req = index.openCursor(null, 'prev');
+        const results = [];
+        req.onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor && results.length < limit) {
+            const { content, ...item } = cursor.value;
+            results.push(item);
+            cursor.continue();
+          } else resolve(results);
+        };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function getGpxById(id) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_GPX_HISTORY, 'readonly');
+        const req = tx.objectStore(STORE_GPX_HISTORY).get(id);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function deleteGpxFromHistory(id) {
+      return new Promise((resolve, reject) => {
+        if (!db) return reject(new Error('DB not initialized'));
+        const tx = db.transaction(STORE_GPX_HISTORY, 'readwrite');
+        const req = tx.objectStore(STORE_GPX_HISTORY).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    const state = {
+      settings: {
+        kakaoApiKey: null,
+        weatherApiKey: null,
+        gradeStyle: 'line',
+        areaColorMode: 'blend',
+        gradeDeadzone: 0.2,
+        gradeK: 4,
+        resampleDist: 20,
+        smoothWindow: 5,
+        gradeWindow: 60
+      },
+      map: null, mapLoaded: false,
+      currentGpx: null,
+      polylineDim: null,
+      polylineFocus: null,
+      hoverMarker: null,
+      segmentBoundaryMarkers: [],
+      mapRouteHoverActive: false,
+      waypointMarkers: [],
+      waypointOverlays: [],
+      selectedWaypointIdx: -1,
+      waypointPanelOpen: false,
+      segments: [],
+      nodes: [],
+      selectedSegmentId: null,
+      selectedNodeId: null,
+      segmentPanelOpen: false,
+      cuesheetOpen: false,
+      segmentIdSeq: 1,
+      planStartTime: '06:00', // HH:MM
+      currentGpxKey: null,
+      currentGpxText: null,
+      chartCtx: null, // { dist, clientX, clientY }
+      roadview: null,
+      chartHover: null,
+      chartZoom: { minDist: 0, maxDist: null },
+      chartTheme: 'dark', // dark | light
+      chartDrag: null,
+      minimapDrag: null
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => document.querySelectorAll(sel);
+
+    async function init() {
+      setMapStatus('초기화 중...');
+      try {
+        await initDB();
+        await loadSettings();
+        bindEvents();
+        if (state.settings.kakaoApiKey) {
+          await loadKakaoMap(state.settings.kakaoApiKey);
+        } else {
+          setMapStatus('카카오맵 API 키가 필요합니다. 설정에서 입력해주세요.');
+          openModal('settings-modal');
         }
-    </script>
+      } catch (err) {
+        console.error('초기화 실패:', err);
+        setMapStatus('초기화 중 오류가 발생했습니다.');
+      }
+    }
+
+    async function loadSettings() {
+      const keys = ['kakaoApiKey', 'weatherApiKey', 'gradeStyle', 'areaColorMode', 'gradeDeadzone', 'gradeK', 'resampleDist', 'smoothWindow', 'gradeWindow'];
+      const s = await getSettings(keys);
+      state.settings.kakaoApiKey = s.kakaoApiKey;
+      state.settings.weatherApiKey = s.weatherApiKey;
+      if (s.gradeStyle) state.settings.gradeStyle = s.gradeStyle;
+      if (s.areaColorMode) state.settings.areaColorMode = s.areaColorMode;
+      if (s.gradeDeadzone != null) state.settings.gradeDeadzone = Number(s.gradeDeadzone);
+      if (s.gradeK != null) state.settings.gradeK = Number(s.gradeK);
+      if (s.resampleDist) state.settings.resampleDist = Number(s.resampleDist);
+      if (s.smoothWindow !== null && s.smoothWindow !== undefined) state.settings.smoothWindow = Number(s.smoothWindow);
+      if (s.gradeWindow) state.settings.gradeWindow = Number(s.gradeWindow);
+
+      $('#kakao-api-key').value = state.settings.kakaoApiKey || '';
+      $('#weather-api-key').value = state.settings.weatherApiKey || '';
+      $('#grade-style').value = state.settings.gradeStyle;
+      $('#area-color-mode').value = state.settings.areaColorMode;
+      $('#grade-deadzone').value = String(state.settings.gradeDeadzone);
+      $('#grade-k').value = String(state.settings.gradeK);
+      $('#resample-dist').value = String(state.settings.resampleDist);
+      $('#smooth-window').value = String(state.settings.smoothWindow);
+      $('#grade-window').value = String(state.settings.gradeWindow);
+    }
+
+    async function saveSettings() {
+      const kakaoKey = $('#kakao-api-key').value.trim();
+      const weatherKey = $('#weather-api-key').value.trim();
+      const gradeStyle = $('#grade-style').value;
+      const areaColorMode = $('#area-color-mode').value;
+      const gradeDeadzone = Number($('#grade-deadzone').value);
+      const gradeK = Number($('#grade-k').value);
+      const resampleDist = Number($('#resample-dist').value);
+      const smoothWindow = Number($('#smooth-window').value);
+      const gradeWindow = Number($('#grade-window').value);
+
+      await saveSetting('kakaoApiKey', kakaoKey || null);
+      await saveSetting('weatherApiKey', weatherKey || null);
+      await saveSetting('gradeStyle', gradeStyle);
+      await saveSetting('areaColorMode', areaColorMode);
+      await saveSetting('gradeDeadzone', gradeDeadzone);
+      await saveSetting('gradeK', gradeK);
+      await saveSetting('resampleDist', resampleDist);
+      await saveSetting('smoothWindow', smoothWindow);
+      await saveSetting('gradeWindow', gradeWindow);
+
+      state.settings.kakaoApiKey = kakaoKey || null;
+      state.settings.weatherApiKey = weatherKey || null;
+      state.settings.gradeStyle = gradeStyle;
+      state.settings.areaColorMode = areaColorMode;
+      state.settings.gradeDeadzone = gradeDeadzone;
+      state.settings.gradeK = gradeK;
+      state.settings.resampleDist = resampleDist;
+      state.settings.smoothWindow = smoothWindow;
+      state.settings.gradeWindow = gradeWindow;
+
+      closeModal('settings-modal');
+      if (!state.mapLoaded && state.settings.kakaoApiKey) {
+        await loadKakaoMap(state.settings.kakaoApiKey);
+      }
+      if (state.currentGpx) redrawCharts();
+    }
+
+    function loadKakaoMap(apiKey) {
+      return new Promise((resolve, reject) => {
+        setMapStatus('지도 로딩 중...');
+        if (window.kakao && window.kakao.maps) {
+          initMap(); resolve(); return;
+        }
+        const script = document.createElement('script');
+        script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${apiKey}&autoload=false`;
+        script.onload = () => {
+          window.kakao.maps.load(() => {
+            try { initMap(); resolve(); }
+            catch (err) {
+              setMapStatus('지도 초기화에 실패했습니다. API 키를 확인해주세요.');
+              openModal('settings-modal');
+              reject(err);
+            }
+          });
+        };
+        script.onerror = () => {
+          setMapStatus('지도 스크립트 로드 실패. API 키 또는 네트워크를 확인해주세요.');
+          openModal('settings-modal');
+          reject(new Error('Kakao Map script load failed'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+
+    function initMap() {
+      state.map = new kakao.maps.Map($('#map'), {
+        center: new kakao.maps.LatLng(37.5665, 126.9780), level: 8
+      });
+      state.mapLoaded = true;
+      state.map.addControl(new kakao.maps.ZoomControl(), kakao.maps.ControlPosition.RIGHT);
+      setMapStatus(null);
+      bindMapRouteInteraction();
+      handleGpxHistoryOnStartup();
+    }
+
+    function setMapStatus(message) {
+      const el = $('#map-status');
+      if (message) {
+        el.querySelector('.status-message').textContent = message;
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+
+    async function handleGpxHistoryOnStartup() {
+      try {
+        const history = await getGpxHistory(1);
+        if (history.length > 0) {
+          const full = await getGpxById(history[0].id);
+          if (full) await loadGpxContent(full.content, full.name, false);
+        } else {
+          openModal('history-modal');
+          renderHistoryList();
+        }
+      } catch (err) {
+        console.error('히스토리 처리 실패:', err);
+      }
+    }
+
+    async function handleGpxFile(file) {
+      if (!file) return;
+      await loadGpxContent(await file.text(), file.name, true);
+      closeModal('history-modal');
+    }
+
+    async function loadGpxContent(gpxText, name, saveToHistory = true) {
+      try {
+        const parsed = parseGpx(gpxText);
+        if (!parsed.points.length) {
+          alert('유효한 경로 포인트가 없는 GPX 파일입니다.');
+          return;
+        }
+        state.currentGpx = { name, ...parsed };
+        state.currentGpxText = gpxText;
+        state.currentGpxKey = gpxContentKey(gpxText, name);
+        state.selectedWaypointIdx = -1;
+        state.selectedSegmentId = null;
+        planSaveMeta.lastSavedAt = null;
+        planSaveMeta.phase = 'idle';
+        // 새 GPX 로드 시 줌 리셋 + 구간 초기화 (저장된 플랜 있으면 복원)
+        state.chartZoom = { minDist: 0, maxDist: parsed.totalDistance };
+        await restoreOrInitPlan();
+        if (planSaveMeta.lastSavedAt) setPlanSaveStatus('saved');
+        else if (planSaveMeta.phase === 'restored') setPlanSaveStatus('restored');
+        else setPlanSaveStatus('idle');
+        drawRouteOnMap(parsed.points);
+        redrawCharts();
+        updateSegmentButton();
+        renderSegmentList();
+        renderCuesheet();
+        openSegmentPanel();
+        if (saveToHistory) {
+          await saveGpxToHistory({
+            name, content: gpxText,
+            distance: parsed.totalDistance,
+            elevationGain: parsed.elevationGain,
+            pointCount: parsed.points.length
+          });
+        }
+      } catch (err) {
+        console.error('GPX 처리 실패:', err);
+        alert('GPX 파일을 처리하는 중 오류가 발생했습니다.');
+      }
+    }
+
+    function parseGpx(gpxText) {
+      const xml = new DOMParser().parseFromString(gpxText, 'text/xml');
+      let pts = xml.querySelectorAll('trkpt');
+      if (!pts.length) pts = xml.querySelectorAll('rtept');
+      const points = [];
+      let totalDistance = 0, elevationGain = 0, prev = null;
+      pts.forEach((pt) => {
+        const lat = parseFloat(pt.getAttribute('lat'));
+        const lon = parseFloat(pt.getAttribute('lon'));
+        const eleEl = pt.querySelector('ele');
+        const ele = eleEl ? parseFloat(eleEl.textContent) : 0;
+        const point = { lat, lon, ele, dist: 0 };
+        if (prev) {
+          const d = haversine(prev.lat, prev.lon, lat, lon);
+          totalDistance += d;
+          point.dist = totalDistance;
+          if (ele - prev.ele > 0) elevationGain += ele - prev.ele;
+        }
+        points.push(point);
+        prev = point;
+      });
+
+      // 웨이포인트 (wpt)
+      const waypoints = [];
+      xml.querySelectorAll('wpt').forEach((wpt) => {
+        const lat = parseFloat(wpt.getAttribute('lat'));
+        const lon = parseFloat(wpt.getAttribute('lon'));
+        if (isNaN(lat) || isNaN(lon)) return;
+        const eleEl = wpt.querySelector('ele');
+        const nameEl = wpt.querySelector('name');
+        const descEl = wpt.querySelector('desc');
+        const cmtEl = wpt.querySelector('cmt');
+        const noteEl = wpt.querySelector('note');
+        const typeEl = wpt.querySelector('type');
+        const typeAttr = wpt.getAttribute('type');
+        const typeStr = (typeEl ? typeEl.textContent.trim() : '') || (typeAttr || '');
+        const descStr = (descEl && descEl.textContent.trim())
+          || (noteEl && noteEl.textContent.trim())
+          || (cmtEl && cmtEl.textContent.trim())
+          || '';
+        waypoints.push({
+          lat, lon,
+          ele: eleEl ? parseFloat(eleEl.textContent) : null,
+          name: nameEl ? nameEl.textContent.trim() : '',
+          desc: descStr,
+          type: typeStr
+        });
+      });
+
+      return { points, totalDistance, elevationGain, waypoints };
+    }
+
+    // ===== 웨이포인트 픽토그램 (인라인 SVG) =====
+    // 24x24 viewBox, stroke 중심의 간결한 픽토그램
+    const WP_ICON_SVG = {
+      LEFT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 6l-6 6 6 6"/><path d="M8 12h10"/></svg>',
+      RIGHT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 6l6 6-6 6"/><path d="M16 12H6"/></svg>',
+      STRAIGHT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M7 10l5-5 5 5"/></svg>',
+      SLIGHT_LEFT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V11"/><path d="M12 11L7 6"/><path d="M7 10V6h4"/></svg>',
+      SLIGHT_RIGHT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V11"/><path d="M12 11l5-5"/><path d="M17 10V6h-4"/></svg>',
+      SHARP_LEFT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 5v10H6"/><path d="M10 11L6 15l4 4"/></svg>',
+      SHARP_RIGHT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5v10h10"/><path d="M14 11l4 4-4 4"/></svg>',
+      U_TURN: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 19V9a4 4 0 018 0v3"/><path d="M17 8l3 4-3 4"/></svg>',
+      TUNNEL: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10a8 8 0 0116 0v10"/><path d="M4 20h16"/><path d="M9 20v-4h6v4"/></svg>',
+      AID_STATION: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>',
+      WATER: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c0 0-6 7-6 11a6 6 0 0012 0c0-4-6-11-6-11z"/></svg>',
+      FOOD: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h16"/><path d="M6 10V7a2 2 0 014 0v3"/><path d="M14 10V6a2 2 0 014 0v4"/><path d="M5 10v8a2 2 0 002 2h10a2 2 0 002-2v-8"/></svg>',
+      REST: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h12a4 4 0 004-4V8"/><path d="M4 14v4"/><path d="M8 14v4"/><path d="M4 10h8"/></svg>',
+      FIRST_CATEGORY: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L12 6l8 12"/><text x="12" y="17" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" font-weight="700" font-family="sans-serif">1</text></svg>',
+      SECOND_CATEGORY: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L12 6l8 12"/><text x="12" y="17" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" font-weight="700" font-family="sans-serif">2</text></svg>',
+      THIRD_CATEGORY: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L12 6l8 12"/><text x="12" y="17" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" font-weight="700" font-family="sans-serif">3</text></svg>',
+      FOURTH_CATEGORY: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L12 6l8 12"/><text x="12" y="17" text-anchor="middle" fill="currentColor" stroke="none" font-size="8" font-weight="700" font-family="sans-serif">4</text></svg>',
+      HORS_CATEGORY: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L12 6l8 12"/><text x="12" y="17" text-anchor="middle" fill="currentColor" stroke="none" font-size="7" font-weight="700" font-family="sans-serif">HC</text></svg>',
+      SUMMIT: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L9 10l3 4 3-6 5 10"/><circle cx="15" cy="6" r="1.5" fill="currentColor" stroke="none"/></svg>',
+      GENERIC: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.5-7-11a7 7 0 0114 0c0 5.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>'
+    };
+
+    const WP_TYPE_COLORS = {
+      LEFT: '#3b82f6', RIGHT: '#3b82f6', STRAIGHT: '#3b82f6',
+      SLIGHT_LEFT: '#3b82f6', SLIGHT_RIGHT: '#3b82f6',
+      SHARP_LEFT: '#2563eb', SHARP_RIGHT: '#2563eb', U_TURN: '#1d4ed8',
+      TUNNEL: '#6b7280',
+      AID_STATION: '#ef4444', WATER: '#0ea5e9', FOOD: '#f59e0b', REST: '#8b5cf6',
+      FIRST_CATEGORY: '#dc2626', SECOND_CATEGORY: '#ea580c',
+      THIRD_CATEGORY: '#d97706', FOURTH_CATEGORY: '#ca8a04',
+      HORS_CATEGORY: '#991b1b', SUMMIT: '#16a34a',
+      GENERIC: '#4a9eff'
+    };
+
+    const WP_TYPE_ALIASES = {
+      LEFT: 'LEFT', RIGHT: 'RIGHT', STRAIGHT: 'STRAIGHT',
+      'SLIGHT LEFT': 'SLIGHT_LEFT', SLIGHT_LEFT: 'SLIGHT_LEFT',
+      'SLIGHT RIGHT': 'SLIGHT_RIGHT', SLIGHT_RIGHT: 'SLIGHT_RIGHT',
+      'SHARP LEFT': 'SHARP_LEFT', SHARP_LEFT: 'SHARP_LEFT',
+      'SHARP RIGHT': 'SHARP_RIGHT', SHARP_RIGHT: 'SHARP_RIGHT',
+      'U TURN': 'U_TURN', U_TURN: 'U_TURN', UTURN: 'U_TURN',
+      TUNNEL: 'TUNNEL',
+      'AID STATION': 'AID_STATION', AID_STATION: 'AID_STATION', AIDSTATION: 'AID_STATION',
+      WATER: 'WATER', FOOD: 'FOOD', RESTAURANT: 'FOOD',
+      REST: 'REST', 'REST AREA': 'REST', REST_AREA: 'REST',
+      'FIRST CATEGORY': 'FIRST_CATEGORY', FIRST_CATEGORY: 'FIRST_CATEGORY', CAT1: 'FIRST_CATEGORY', 'CAT 1': 'FIRST_CATEGORY',
+      'SECOND CATEGORY': 'SECOND_CATEGORY', SECOND_CATEGORY: 'SECOND_CATEGORY', CAT2: 'SECOND_CATEGORY', 'CAT 2': 'SECOND_CATEGORY',
+      'THIRD CATEGORY': 'THIRD_CATEGORY', THIRD_CATEGORY: 'THIRD_CATEGORY', CAT3: 'THIRD_CATEGORY', 'CAT 3': 'THIRD_CATEGORY',
+      'FOURTH CATEGORY': 'FOURTH_CATEGORY', FOURTH_CATEGORY: 'FOURTH_CATEGORY', CAT4: 'FOURTH_CATEGORY', 'CAT 4': 'FOURTH_CATEGORY',
+      'HORS CATEGORY': 'HORS_CATEGORY', HORS_CATEGORY: 'HORS_CATEGORY', HC: 'HORS_CATEGORY',
+      SUMMIT: 'SUMMIT', PEAK: 'SUMMIT', TOP: 'SUMMIT',
+      GENERIC: 'GENERIC', GENERAL: 'GENERIC', INFO: 'GENERIC'
+    };
+
+    function normalizeWpType(raw) {
+      if (!raw) return 'GENERIC';
+      const key = String(raw).trim().toUpperCase().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ');
+      const compact = key.replace(/\s/g, '_');
+      return WP_TYPE_ALIASES[key] || WP_TYPE_ALIASES[compact] || WP_TYPE_ALIASES[raw.trim().toUpperCase()] || 'GENERIC';
+    }
+
+    function getWaypointIconMeta(typeRaw) {
+      const key = normalizeWpType(typeRaw);
+      return {
+        key,
+        svg: WP_ICON_SVG[key] || WP_ICON_SVG.GENERIC,
+        color: WP_TYPE_COLORS[key] || WP_TYPE_COLORS.GENERIC
+      };
+    }
+
+    function buildWaypointMarkerEl(wp, idx) {
+      const { svg, color } = getWaypointIconMeta(wp.type);
+      const wrap = document.createElement('div');
+      wrap.className = 'wp-marker';
+      wrap.dataset.idx = String(idx);
+      wrap.style.cssText = [
+        'width:28px', 'height:28px', 'border-radius:50%',
+        `background:${color}`, 'color:#fff',
+        'display:flex', 'align-items:center', 'justify-content:center',
+        'box-shadow:0 2px 6px rgba(0,0,0,0.45)', 'cursor:pointer',
+        'border:2px solid rgba(255,255,255,0.9)',
+        'transform:translateY(-4px)'
+      ].join(';');
+      wrap.innerHTML = `<div style="width:16px;height:16px;display:flex;align-items:center;justify-content:center">${svg}</div>`;
+      const svgEl = wrap.querySelector('svg');
+      if (svgEl) {
+        svgEl.setAttribute('width', '16');
+        svgEl.setAttribute('height', '16');
+        svgEl.style.display = 'block';
+      }
+      return wrap;
+    }
+
+    function buildWaypointListIconHtml(typeRaw) {
+      const { svg, color } = getWaypointIconMeta(typeRaw);
+      return `<div class="wp-icon" style="background:${color}">${svg}</div>`;
+    }
+
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 +
+        Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function clearMapOverlays() {
+      if (state.polylineDim) { state.polylineDim.setMap(null); state.polylineDim = null; }
+      if (state.polylineFocus) { state.polylineFocus.setMap(null); state.polylineFocus = null; }
+      if (state.hoverMarker) { state.hoverMarker.setMap(null); state.hoverMarker = null; }
+      clearWaypointMarkers();
+      clearSegmentBoundaryMarkers();
+    }
+
+    function clearWaypointMarkers() {
+      state.waypointMarkers.forEach(m => { if (m) try { m.setMap(null); } catch (_) {} });
+      state.waypointOverlays.forEach(o => { if (o) try { o.setMap(null); } catch (_) {} });
+      state.waypointMarkers = [];
+      state.waypointOverlays = [];
+      state.selectedWaypointIdx = -1;
+    }
+
+    function clearSegmentBoundaryMarkers() {
+      (state.segmentBoundaryMarkers || []).forEach(m => { try { m.setMap(null); } catch (_) {} });
+      state.segmentBoundaryMarkers = [];
+    }
+
+    /** 구간 경계를 지도에 표시 */
+    function drawSegmentBoundariesOnMap() {
+      clearSegmentBoundaryMarkers();
+      if (!state.map || !state.currentGpx || !state.segments || state.segments.length < 2) return;
+      const points = state.currentGpx.points;
+      state.segments.forEach((seg, i) => {
+        if (i === 0) return;
+        const pt = (seg.startIdx != null && points[seg.startIdx])
+          ? points[seg.startIdx]
+          : findPointNearDist(points, seg.startDist);
+        if (!pt) return;
+        const pos = new kakao.maps.LatLng(pt.lat, pt.lon);
+        const el = document.createElement('div');
+        el.title = (state.segments[i - 1].name || '') + ' / ' + (seg.name || '');
+        el.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#ffc850;border:2px solid #fff;' +
+          'box-shadow:0 1px 4px rgba(0,0,0,0.45);cursor:default;';
+        const ov = new kakao.maps.CustomOverlay({
+          position: pos, content: el, yAnchor: 0.5, xAnchor: 0.5, zIndex: 14
+        });
+        ov.setMap(state.map);
+        state.segmentBoundaryMarkers.push(ov);
+      });
+    }
+
+    /** 화면 픽셀 기준으로 경로상 최근접 점 (지도 호버용) */
+    /** 지도 커서 좌표(lat/lng) 기준 경로 최근접점. 임계값은 화면 픽셀≈미터 */
+    function findNearestRoutePointFromLatLng(lat, lon, maxPx) {
+      maxPx = maxPx == null ? 18 : maxPx;
+      if (!state.map || !state.currentGpx) return null;
+      const points = state.currentGpx.points;
+      if (!points.length) return null;
+      const mapEl = $('#map');
+      let mpp = 3;
+      try {
+        const b = state.map.getBounds();
+        if (b && mapEl) {
+          const sw = b.getSouthWest();
+          const ne = b.getNorthEast();
+          const widthM = haversine(sw.getLat(), sw.getLng(), sw.getLat(), ne.getLng()) * 1000;
+          mpp = widthM / Math.max(1, mapEl.offsetWidth || 1);
+        }
+      } catch (_) {}
+      const maxM = Math.max(8, maxPx * mpp); // 최소 8m
+      let best = null, bestM = maxM;
+      const n = points.length;
+      const step = n > 8000 ? 5 : (n > 4000 ? 3 : (n > 2000 ? 2 : 1));
+      for (let i = 0; i < n; i += step) {
+        const p = points[i];
+        const d = haversine(lat, lon, p.lat, p.lon) * 1000;
+        if (d < bestM) { bestM = d; best = p; }
+      }
+      if (best && step > 1) {
+        // 인덱스를 dist로 재탐색 (indexOf는 객체 참조 실패 가능)
+        let bi = -1;
+        for (let i = 0; i < n; i++) if (points[i] === best) { bi = i; break; }
+        if (bi < 0) bi = 0;
+        for (let j = Math.max(0, bi - step * 3); j <= Math.min(n - 1, bi + step * 3); j++) {
+          const p = points[j];
+          const d = haversine(lat, lon, p.lat, p.lon) * 1000;
+          if (d < bestM) { bestM = d; best = p; }
+        }
+      }
+      return best ? { point: best, meters: bestM } : null;
+    }
+
+    // 하위 호환 이름
+    function findNearestRoutePointByScreenPx(clientX, clientY, maxPx) {
+      // DOM 좌표만으로는 부정확 → null (kakao mousemove 경로 사용)
+      return null;
+    }
+
+    function showChartTooltipForDist(distKm) {
+      const tooltip = $('#chart-tooltip');
+      const hover = state.chartHover;
+      if (!tooltip || !hover || !hover.data.length) return;
+      let best = hover.data[0], bestDiff = Math.abs(hover.data[0].dist - distKm);
+      for (let i = 1; i < hover.data.length; i++) {
+        const d = Math.abs(hover.data[i].dist - distKm);
+        if (d < bestDiff) { bestDiff = d; best = hover.data[i]; }
+      }
+      const gradeStr = (best.grade >= 0 ? '+' : '') + (best.grade != null ? best.grade.toFixed(1) : '0.0') + '%';
+      tooltip.innerHTML = `
+        <div class="tt-row"><span class="tt-label">거리</span><span class="tt-val">${best.dist.toFixed(2)} km</span></div>
+        <div class="tt-row"><span class="tt-label">고도</span><span class="tt-val">${Math.round(best.ele)} m</span></div>
+        <div class="tt-row"><span class="tt-label">경사</span><span class="tt-val">${gradeStr}</span></div>
+      `;
+      tooltip.style.display = 'block';
+      const { pad, viewMin, viewSpan, cW, cH, yMin, yMax, W, H } = hover;
+      const px = pad.left + ((best.dist - viewMin) / viewSpan) * cW;
+      const py = pad.top + cH - ((best.ele - yMin) / (yMax - yMin || 1)) * cH;
+      let left = px + 10, top = py + 8;
+      const tw = tooltip.offsetWidth || 120;
+      const th = tooltip.offsetHeight || 60;
+      if (left + tw > W - 4) left = px - tw - 10;
+      if (left < 4) left = 4;
+      if (top + th > H - 4) top = py - th - 8;
+      if (top < 4) top = 4;
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+    }
+
+
+    function pointsInDistRange(points, minDist, maxDist) {
+      return points.filter(p => p.dist >= minDist - 1e-6 && p.dist <= maxDist + 1e-6);
+    }
+
+    function findPointNearDist(points, dist) {
+      if (!points.length) return null;
+      let best = points[0], bestD = Math.abs(points[0].dist - dist);
+      for (let i = 1; i < points.length; i++) {
+        const d = Math.abs(points[i].dist - dist);
+        if (d < bestD) { bestD = d; best = points[i]; }
+      }
+      return best;
+    }
+
+    function drawRouteOnMap(points, fit = true) {
+      if (!state.map || !points.length) return;
+      clearMapOverlays();
+      updateRouteHighlight();
+      drawWaypointsOnMap();
+      drawSegmentBoundariesOnMap();
+      if (fit) {
+        const path = points.map(p => new kakao.maps.LatLng(p.lat, p.lon));
+        const bounds = new kakao.maps.LatLngBounds();
+        path.forEach(ll => bounds.extend(ll));
+        // 웨이포인트도 bounds에 포함
+        const wps = (state.currentGpx && state.currentGpx.waypoints) || [];
+        wps.forEach(wp => bounds.extend(new kakao.maps.LatLng(wp.lat, wp.lon)));
+        state.map.setBounds(bounds);
+      }
+    }
+
+    function drawWaypointsOnMap() {
+      if (!state.map || !state.currentGpx) return;
+      clearWaypointMarkers();
+      const wps = state.currentGpx.waypoints || [];
+      wps.forEach((wp, idx) => {
+        const pos = new kakao.maps.LatLng(wp.lat, wp.lon);
+        const iconEl = buildWaypointMarkerEl(wp, idx);
+        iconEl.title = wp.name || wp.type || `WP ${idx + 1}`;
+        const overlay = new kakao.maps.CustomOverlay({
+          position: pos,
+          content: iconEl,
+          yAnchor: 1,
+          xAnchor: 0.5,
+          zIndex: 16
+        });
+        overlay.setMap(state.map);
+        state.waypointOverlays.push(overlay);
+        // Marker 슬롯은 호환용으로 비워 둠 (클릭은 overlay DOM에서 처리)
+        state.waypointMarkers.push(null);
+
+        iconEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectWaypoint(idx, true);
+        });
+      });
+      updateWaypointButton();
+      renderWaypointList();
+    }
+
+    function updateWaypointButton() {
+      const btn = $('#btn-waypoints');
+      const wps = (state.currentGpx && state.currentGpx.waypoints) || [];
+      if (wps.length > 0) {
+        btn.style.display = '';
+        btn.title = `웨이포인트 목록 (${wps.length})`;
+      } else {
+        btn.style.display = 'none';
+        closeWaypointPanel();
+      }
+    }
+
+    function renderWaypointList() {
+      const listEl = $('#waypoint-list');
+      const countEl = $('#wp-count');
+      const wps = (state.currentGpx && state.currentGpx.waypoints) || [];
+      if (countEl) countEl.textContent = wps.length ? `(${wps.length})` : '';
+      if (!wps.length) {
+        listEl.innerHTML = '<p class="empty-wp">웨이포인트가 없습니다.</p>';
+        return;
+      }
+      listEl.innerHTML = wps.map((wp, idx) => {
+        const name = escapeHtml(wp.name || `웨이포인트 ${idx + 1}`);
+        const elev = wp.ele != null && !isNaN(wp.ele) ? Math.round(wp.ele) + ' m' : '';
+        const typeKey = normalizeWpType(wp.type);
+        const typeLabel = wp.type ? escapeHtml(wp.type) : '';
+        const meta = [elev, typeLabel].filter(Boolean).join(' · ');
+        const desc = wp.desc ? `<div class="wp-desc">${escapeHtml(wp.desc)}</div>` : '';
+        const active = idx === state.selectedWaypointIdx ? ' active' : '';
+        const iconHtml = buildWaypointListIconHtml(wp.type);
+        return `<div class="wp-item${active}" data-idx="${idx}" data-type="${escapeHtml(typeKey)}">
+          ${iconHtml}
+          <div class="wp-info">
+            <div class="wp-name">${name}</div>
+            ${meta ? `<div class="wp-meta">${meta}</div>` : ''}
+            ${desc}
+          </div>
+        </div>`;
+      }).join('');
+      listEl.querySelectorAll('.wp-item').forEach(el => {
+        el.addEventListener('click', () => {
+          selectWaypoint(Number(el.dataset.idx), true);
+        });
+      });
+    }
+
+    function selectWaypoint(idx, center = false) {
+      const wps = (state.currentGpx && state.currentGpx.waypoints) || [];
+      if (idx < 0 || idx >= wps.length) return;
+      state.selectedWaypointIdx = idx;
+      renderWaypointList();
+      if (center) {
+        const wp = wps[idx];
+        centerMapOnPoint(wp);
+        // 잠시 호버 마커로 강조
+        showHoverOnMap(wp);
+      }
+    }
+
+    function openWaypointPanel() {
+      state.waypointPanelOpen = true;
+      $('#waypoint-panel').classList.remove('hidden');
+      $('#btn-waypoints').classList.add('active');
+      if (state.segmentPanelOpen) closeSegmentPanel();
+      renderWaypointList();
+    }
+
+    function closeWaypointPanel() {
+      state.waypointPanelOpen = false;
+      $('#waypoint-panel').classList.add('hidden');
+      $('#btn-waypoints').classList.remove('active');
+    }
+
+    function toggleWaypointPanel() {
+      if (state.waypointPanelOpen) closeWaypointPanel();
+      else openWaypointPanel();
+    }
+
+    // ===== 구간(Segment) 관리 =====
+    function nextSegmentId() {
+      return 'seg_' + (state.segmentIdSeq++);
+    }
+
+    function emptyCueFields() {
+      return {
+        targetDurationSec: null,
+        restAfterSec: 0,
+        targetPower: null,
+        targetHr: null,
+        limitPower: null,
+        limitHr: null,
+        note: ''
+      };
+    }
+
+    function makeSegment(partial) {
+      const p = Object.assign({}, partial || {});
+      const id = p.id || nextSegmentId();
+      delete p.id;
+      return Object.assign({
+        id: id,
+        name: '',
+        startDist: 0,
+        endDist: 0,
+        startIdx: 0,
+        endIdx: 0
+      }, emptyCueFields(), p, { id: id });
+    }
+
+    let nodeIdSeq = 1;
+    function nextNodeId() {
+      return 'node_' + (nodeIdSeq++);
+    }
+
+    function makeNode(partial) {
+      return {
+        id: partial.id || nextNodeId(),
+        name: partial.name || '',
+        dist: partial.dist != null ? partial.dist : 0,
+        pointIdx: partial.pointIdx != null ? partial.pointIdx : 0,
+        role: partial.role || 'mid'
+      };
+    }
+    /** segments 경계로부터 nodes 동기화 (이름 유지) */
+    function rebuildNodesFromSegments(keepNames) {
+      if (!state.currentGpx || !state.segments.length) {
+        state.nodes = [];
+        return;
+      }
+      const points = state.currentGpx.points;
+      const total = state.currentGpx.totalDistance;
+      const oldByDist = new Map();
+      (keepNames || state.nodes || []).forEach(n => {
+        const k = (Math.round((n.dist || 0) * 1000) / 1000).toFixed(3);
+        oldByDist.set(k, n);
+      });
+      const nodes = [];
+      const pushNode = (dist, pointIdx, fallbackName) => {
+        const k = (Math.round(dist * 1000) / 1000).toFixed(3);
+        const prev = oldByDist.get(k);
+        nodes.push(makeNode({
+          id: prev ? prev.id : undefined,
+          name: (prev && prev.name) || fallbackName || '',
+          dist,
+          pointIdx
+        }));
+      };
+      // first node
+      const s0 = state.segments[0];
+      pushNode(s0.startDist, s0.startIdx, '출발');
+      state.segments.forEach((seg, i) => {
+        const isLast = i === state.segments.length - 1;
+        pushNode(
+          seg.endDist,
+          seg.endIdx,
+          isLast ? '도착' : (seg.name ? '' : '')
+        );
+      });
+      // default names if empty
+      if (nodes.length && !nodes[0].name) nodes[0].name = '출발';
+      if (nodes.length > 1 && !nodes[nodes.length - 1].name) nodes[nodes.length - 1].name = '도착';
+      nodes.forEach((n, i) => {
+        if (!n.name) n.name = '지점 ' + i;
+        if (i === 0) n.role = 'start';
+        else if (i === nodes.length - 1) n.role = 'end';
+        else n.role = n.role === 'start' || n.role === 'end' ? 'mid' : (n.role || 'mid');
+      });
+      state.nodes = nodes;
+      // bump nodeIdSeq
+      nodes.forEach(n => {
+        const m = String(n.id || '').match(/(\d+)$/);
+        if (m) nodeIdSeq = Math.max(nodeIdSeq, parseInt(m[1], 10) + 1);
+      });
+    }
+
+    function initSegmentsFromGpx() {
+      if (!state.currentGpx) {
+        state.segments = [];
+        state.nodes = [];
+        return;
+      }
+      const total = state.currentGpx.totalDistance;
+      const points = state.currentGpx.points;
+      state.segments = [makeSegment({
+        startDist: 0,
+        endDist: total,
+        startIdx: 0,
+        endIdx: Math.max(0, points.length - 1)
+      })];
+      state.selectedSegmentId = state.segments[0].id;
+      state.nodes = [];
+      rebuildNodesFromSegments([]);
+      state.selectedNodeId = state.nodes[0] ? state.nodes[0].id : null;
+    }
+
+    function tryParsePlanFromGpxText(gpxText) {
+      try {
+        const xml = new DOMParser().parseFromString(gpxText, 'text/xml');
+        const segs = xml.getElementsByTagNameNS('https://gpx-riding-helper.local/ns', 'segment');
+        if (!segs.length) {
+          // prefix 없이 localName만
+          const all = xml.getElementsByTagName('*');
+          const list = [];
+          let startTime = null;
+          for (const el of all) {
+            if (el.localName === 'plan' && el.getAttribute('startTime')) startTime = el.getAttribute('startTime');
+            if (el.localName === 'segment' && el.getAttribute('startDist') != null) {
+              list.push({
+                id: el.getAttribute('id') || undefined,
+                name: el.getAttribute('name') || '구간',
+                startDist: parseFloat(el.getAttribute('startDist')),
+                endDist: parseFloat(el.getAttribute('endDist')),
+                targetDurationSec: el.getAttribute('targetDuration') != null ? parseFloat(el.getAttribute('targetDuration')) : null,
+                restAfterSec: el.getAttribute('restAfter') != null ? parseFloat(el.getAttribute('restAfter')) : 0,
+                targetPower: el.getAttribute('targetPower') != null ? parseFloat(el.getAttribute('targetPower')) : null,
+                targetHr: el.getAttribute('targetHr') != null ? parseFloat(el.getAttribute('targetHr')) : null,
+                limitPower: el.getAttribute('limitPower') != null ? parseFloat(el.getAttribute('limitPower')) : null,
+                limitHr: el.getAttribute('limitHr') != null ? parseFloat(el.getAttribute('limitHr')) : null,
+                note: el.getAttribute('note') || ''
+              });
+            }
+          }
+          if (!list.length) return null;
+          return { startTime, segments: list };
+        }
+        const list = [];
+        for (const el of segs) {
+          list.push({
+            id: el.getAttribute('id') || undefined,
+            name: el.getAttribute('name') || '구간',
+            startDist: parseFloat(el.getAttribute('startDist')),
+            endDist: parseFloat(el.getAttribute('endDist')),
+            targetDurationSec: el.getAttribute('targetDuration') != null ? parseFloat(el.getAttribute('targetDuration')) : null,
+            restAfterSec: el.getAttribute('restAfter') != null ? parseFloat(el.getAttribute('restAfter')) : 0,
+            targetPower: el.getAttribute('targetPower') != null ? parseFloat(el.getAttribute('targetPower')) : null,
+            targetHr: el.getAttribute('targetHr') != null ? parseFloat(el.getAttribute('targetHr')) : null,
+            limitPower: el.getAttribute('limitPower') != null ? parseFloat(el.getAttribute('limitPower')) : null,
+            limitHr: el.getAttribute('limitHr') != null ? parseFloat(el.getAttribute('limitHr')) : null,
+            note: el.getAttribute('note') || ''
+          });
+        }
+        const planEl = xml.getElementsByTagNameNS('https://gpx-riding-helper.local/ns', 'plan')[0];
+        return { startTime: planEl ? planEl.getAttribute('startTime') : null, segments: list };
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function restoreOrInitPlan() {
+      initSegmentsFromGpx();
+      if (!state.currentGpxKey) return;
+      try {
+        // 큐시트 편집은 IndexedDB에 저장되므로 IDB를 우선.
+        // GPX 내장 플랜은 IDB에 없을 때만 사용 (내보내기 파일 재로드 등).
+        const idbPlan = await getPlanFromDB(state.currentGpxKey);
+        const gpxPlan = state.currentGpxText ? tryParsePlanFromGpxText(state.currentGpxText) : null;
+        let plan = null;
+        const idbOk = idbPlan && idbPlan.segments && idbPlan.segments.length;
+        const gpxOk = gpxPlan && gpxPlan.segments && gpxPlan.segments.length;
+        if (idbOk && gpxOk) {
+          // 둘 다 있으면 더 최근 것 (IDB updatedAt vs GPX는 updatedAt 없음 → IDB 우선)
+          plan = idbPlan;
+        } else if (idbOk) {
+          plan = idbPlan;
+        } else if (gpxOk) {
+          plan = gpxPlan;
+        }
+        if (!plan || !plan.segments || !plan.segments.length) return;
+        const total = state.currentGpx.totalDistance;
+        const points = state.currentGpx.points;
+        // 거리 범위가 대략 맞으면 복원
+        const restored = plan.segments.map(s => {
+          const startIdx = findPointIndexNearDist(points, s.startDist);
+          const endIdx = findPointIndexNearDist(points, s.endDist);
+          return makeSegment({
+            ...s,
+            startIdx,
+            endIdx,
+            startDist: points[startIdx].dist,
+            endDist: points[endIdx].dist
+          });
+        }).filter(s => s.endDist > s.startDist + 0.001);
+        if (!restored.length) return;
+        // 전체가 덮이지 않으면 첫/끝 보정
+        if (restored[0].startDist > 0.05) {
+          restored.unshift(makeSegment({
+            name: '구간 (앞)',
+            startDist: 0,
+            endDist: restored[0].startDist,
+            startIdx: 0,
+            endIdx: restored[0].startIdx
+          }));
+        }
+        const last = restored[restored.length - 1];
+        if (last.endDist < total - 0.05) {
+          restored.push(makeSegment({
+            name: '구간 (뒤)',
+            startDist: last.endDist,
+            endDist: total,
+            startIdx: last.endIdx,
+            endIdx: points.length - 1
+          }));
+        }
+        state.segments = restored;
+        state.selectedSegmentId = restored[0].id;
+        let maxSeq = state.segmentIdSeq;
+        restored.forEach(s => {
+          const m = String(s.id || '').match(/(\d+)$/);
+          if (m) maxSeq = Math.max(maxSeq, parseInt(m[1], 10) + 1);
+        });
+        state.segmentIdSeq = maxSeq;
+        rebuildNodesFromSegments(plan.nodes || []);
+        if (plan.startTime) state.planStartTime = plan.startTime;
+        const stInput = $('#cs-start-time');
+        if (stInput) stInput.value = state.planStartTime;
+        if (plan.updatedAt) {
+          planSaveMeta.lastSavedAt = new Date(plan.updatedAt);
+        } else {
+          planSaveMeta.lastSavedAt = null;
+          planSaveMeta.phase = 'restored';
+        }
+      } catch (e) {
+        console.warn('플랜 복원 실패', e);
+      }
+    }
+
+    let planSaveMeta = { phase: 'idle', lastSavedAt: null };
+
+    function formatSaveTime(d) {
+      if (!d) return '';
+      const t = d instanceof Date ? d : new Date(d);
+      return String(t.getHours()).padStart(2, '0') + ':' +
+        String(t.getMinutes()).padStart(2, '0') + ':' +
+        String(t.getSeconds()).padStart(2, '0');
+    }
+
+    function setPlanSaveStatus(phase) {
+      planSaveMeta.phase = phase;
+      const el = $('#cs-save-status');
+      if (!el) return;
+      el.classList.remove('is-idle', 'is-dirty', 'is-saving', 'is-saved', 'is-error');
+      if (phase === 'dirty') {
+        el.classList.add('is-dirty');
+        const last = planSaveMeta.lastSavedAt
+          ? ' · 최근 ' + formatSaveTime(planSaveMeta.lastSavedAt)
+          : '';
+        el.textContent = '입력 중…' + last;
+      } else if (phase === 'saving') {
+        el.classList.add('is-saving');
+        el.textContent = '저장 중…';
+      } else if (phase === 'saved') {
+        el.classList.add('is-saved');
+        el.textContent = '저장됨 ' + formatSaveTime(planSaveMeta.lastSavedAt);
+      } else if (phase === 'error') {
+        el.classList.add('is-error');
+        el.textContent = '저장 실패';
+      } else if (phase === 'restored') {
+        el.classList.add('is-saved');
+        el.textContent = planSaveMeta.lastSavedAt
+          ? ('복원됨 ' + formatSaveTime(planSaveMeta.lastSavedAt))
+          : '복원됨 (GPX)';
+      } else {
+        el.classList.add('is-idle');
+        if (planSaveMeta.lastSavedAt) {
+          el.classList.remove('is-idle');
+          el.classList.add('is-saved');
+          el.textContent = '저장됨 ' + formatSaveTime(planSaveMeta.lastSavedAt);
+        } else if (state.currentGpxKey) {
+          el.textContent = '저장 대기';
+        } else {
+          el.textContent = 'GPX 로드 후 자동 저장';
+        }
+      }
+    }
+
+    function schedulePlanSave(immediate) {
+      if (planSaveTimer) clearTimeout(planSaveTimer);
+      setPlanSaveStatus('dirty');
+      if (immediate) {
+        planSaveTimer = null;
+        persistPlanNow();
+      } else {
+        planSaveTimer = setTimeout(() => { persistPlanNow(); }, 150);
+      }
+    }
+
+    function buildPlanPayload() {
+      return {
+        gpxKey: state.currentGpxKey,
+        gpxName: state.currentGpx ? state.currentGpx.name : '',
+        startTime: state.planStartTime,
+        nodes: (state.nodes || []).map(n => ({
+          id: n.id,
+          name: n.name,
+          dist: n.dist,
+          role: n.role || 'mid'
+        })),
+        segments: (state.segments || []).map(s => ({
+          id: s.id,
+          name: s.name || '',
+          startDist: s.startDist,
+          endDist: s.endDist,
+          targetDurationSec: s.targetDurationSec,
+          restAfterSec: s.restAfterSec || 0,
+          targetPower: s.targetPower,
+          targetHr: s.targetHr,
+          limitPower: s.limitPower,
+          limitHr: s.limitHr,
+          note: s.note || ''
+        })),
+        updatedAt: Date.now()
+      };
+    }
+
+    async function persistPlanNow() {
+      planSaveTimer = null;
+      if (!state.currentGpxKey || !state.currentGpx) {
+        setPlanSaveStatus('idle');
+        return;
+      }
+      setPlanSaveStatus('saving');
+      const plan = buildPlanPayload();
+      try {
+        await savePlanToDB(plan);
+        planSaveMeta.lastSavedAt = new Date(plan.updatedAt);
+        // 아직 입력이 더 들어와 타이머가 다시 걸렸으면 dirty 유지
+        if (!planSaveTimer) setPlanSaveStatus('saved');
+      } catch (e) {
+        setPlanSaveStatus('error');
+        console.error('플랜 저장 실패', e);
+      }
+    }
+
+    function flushPlanSaveSync() {
+      if (!state.currentGpxKey || !state.currentGpx || !db) return;
+      if (planSaveTimer) {
+        clearTimeout(planSaveTimer);
+        planSaveTimer = null;
+      }
+      try {
+        const plan = buildPlanPayload();
+        const tx = db.transaction(STORE_PLANS, 'readwrite');
+        tx.objectStore(STORE_PLANS).put(plan);
+        // unload 직전이라 await 불가 — put 요청만이라도 넣어둠
+        planSaveMeta.lastSavedAt = new Date(plan.updatedAt);
+      } catch (e) {
+        console.error('동기 저장 실패', e);
+      }
+    }
+
+    function findPointIndexNearDist(points, dist) {
+      if (!points.length) return 0;
+      let best = 0, bestD = Math.abs(points[0].dist - dist);
+      for (let i = 1; i < points.length; i++) {
+        const d = Math.abs(points[i].dist - dist);
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return best;
+    }
+
+    function computeSegmentStats(seg) {
+      const points = state.currentGpx ? state.currentGpx.points : [];
+      if (!points.length || !seg) {
+        return { distance: 0, elevGain: 0, elevLoss: 0, netGrade: 0, startEle: 0, endEle: 0 };
+      }
+      const i0 = Math.max(0, seg.startIdx);
+      const i1 = Math.min(points.length - 1, seg.endIdx);
+      let elevGain = 0, elevLoss = 0;
+      for (let i = i0 + 1; i <= i1; i++) {
+        const d = points[i].ele - points[i - 1].ele;
+        if (d > 0) elevGain += d;
+        else elevLoss += -d;
+      }
+      const distance = Math.max(0, seg.endDist - seg.startDist);
+      const startEle = points[i0].ele;
+      const endEle = points[i1].ele;
+      const netGrade = distance > 0.001 ? ((endEle - startEle) / (distance * 1000)) * 100 : 0;
+      return { distance, elevGain, elevLoss, netGrade, startEle, endEle };
+    }
+
+    function splitSegmentAtDist(distKm) {
+      if (!state.currentGpx) return false;
+      const points = state.currentGpx.points;
+      const total = state.currentGpx.totalDistance;
+      const d = Math.max(0, Math.min(total, distKm));
+      // 너무 가장자리면 무시 (50m)
+      if (d < 0.05 || d > total - 0.05) {
+        alert('경로 시작/끝에서 너무 가까운 지점입니다. (최소 50m 여유)');
+        return false;
+      }
+      const seg = state.segments.find(s => d > s.startDist + 0.01 && d < s.endDist - 0.01);
+      if (!seg) {
+        alert('이미 분할된 지점이거나 구간 경계입니다.');
+        return false;
+      }
+      const idx = findPointIndexNearDist(points, d);
+      const snapDist = points[idx].dist;
+      if (snapDist <= seg.startDist + 0.01 || snapDist >= seg.endDist - 0.01) {
+        alert('구간 경계와 너무 가깝습니다.');
+        return false;
+      }
+      const left = makeSegment({
+        id: seg.id,
+        startDist: seg.startDist,
+        endDist: snapDist,
+        startIdx: seg.startIdx,
+        endIdx: idx,
+        targetDurationSec: null,
+        restAfterSec: 0,
+        targetPower: seg.targetPower,
+        targetHr: seg.targetHr,
+        limitPower: seg.limitPower,
+        limitHr: seg.limitHr,
+        note: seg.note
+      });
+      const right = makeSegment({
+        startDist: snapDist,
+        endDist: seg.endDist,
+        startIdx: idx,
+        endIdx: seg.endIdx
+      });
+      const pos = state.segments.findIndex(s => s.id === seg.id);
+      state.segments.splice(pos, 1, left, right);
+      state.selectedSegmentId = left.id;
+      rebuildNodesFromSegments();
+      // 새 경계 노드 이름 기본값
+      const mid = state.nodes.find(n => Math.abs(n.dist - snapDist) < 0.02);
+      if (mid && (!mid.name || mid.name.startsWith('지점'))) mid.name = '지점';
+      state.selectedNodeId = mid ? mid.id : null;
+      renderSegTable();
+      updateSegmentButton();
+      redrawCharts();
+      drawSegmentBoundariesOnMap();
+      schedulePlanSave(true);
+      return true;
+    }
+
+    /** 중간 노드 삭제 → 인접 구간 병합 */
+    function deleteNode(nodeId) {
+      const ni = state.nodes.findIndex(n => n.id === nodeId);
+      if (ni <= 0 || ni >= state.nodes.length - 1) {
+        alert('출발/도착 지점은 삭제할 수 없습니다.');
+        return false;
+      }
+      // node ni is the end of segment ni-1 and start of segment ni
+      const segA = state.segments[ni - 1];
+      const segB = state.segments[ni];
+      if (!segA || !segB) return false;
+      const durA = segA.targetDurationSec, durB = segB.targetDurationSec;
+      const mergedDur = (durA != null || durB != null) ? (durA || 0) + (durB || 0) : null;
+      const merged = makeSegment({
+        id: segA.id,
+        startDist: segA.startDist,
+        endDist: segB.endDist,
+        startIdx: segA.startIdx,
+        endIdx: segB.endIdx,
+        targetDurationSec: mergedDur,
+        restAfterSec: segB.restAfterSec || 0,
+        targetPower: segA.targetPower,
+        targetHr: segA.targetHr,
+        limitPower: segA.limitPower,
+        limitHr: segA.limitHr,
+        note: [segA.note, segB.note].filter(Boolean).join(' / ')
+      });
+      state.segments.splice(ni - 1, 2, merged);
+      state.selectedSegmentId = merged.id;
+      const keep = state.nodes.filter((_, i) => i !== ni);
+      rebuildNodesFromSegments(keep);
+      state.selectedNodeId = state.nodes[Math.max(0, ni - 1)]?.id || null;
+      renderSegTable();
+      updateSegmentButton();
+      redrawCharts();
+      drawSegmentBoundariesOnMap();
+      schedulePlanSave(true);
+      return true;
+    }
+
+    /** 하위 호환: 기존 mergeSegmentWithPrev */
+    function mergeSegmentWithPrev(segId) {
+      const i = state.segments.findIndex(s => s.id === segId);
+      if (i <= 0) return false;
+      // 구간 i 시작 노드 = nodes[i]
+      const node = state.nodes[i];
+      if (node) return deleteNode(node.id);
+      return false;
+    }
+
+    function addRestAfter(segId) {
+      const seg = state.segments.find(s => s.id === segId);
+      if (!seg) return;
+      if (!seg.restAfterSec) seg.restAfterSec = 10 * 60;
+      renderSegTable();
+      schedulePlanSave(true);
+    }
+
+    /** 노드 도착 후 휴식 (해당 노드로 들어오는 구간의 restAfter) */
+    function addRestAtNode(nodeId) {
+      const ni = state.nodes.findIndex(n => n.id === nodeId);
+      if (ni <= 0) return; // 출발에는 휴식 없음
+      const seg = state.segments[ni - 1];
+      if (!seg) return;
+      if (!seg.restAfterSec) seg.restAfterSec = 10 * 60;
+      renderSegTable();
+      schedulePlanSave(true);
+    }
+
+    function clearRestAfter(segId) {
+      const seg = state.segments.find(s => s.id === segId);
+      if (!seg) return;
+      seg.restAfterSec = 0;
+      renderSegTable();
+      schedulePlanSave(true);
+    }
+
+    function renameNode(nodeId, name) {
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      const n = (name || '').trim();
+      if (n) node.name = n;
+      schedulePlanSave(true);
+    }
+
+    function renameSegment(segId, name) {
+      const seg = state.segments.find(s => s.id === segId);
+      if (!seg) return;
+      const n = (name || '').trim();
+      if (n) seg.name = n;
+      schedulePlanSave(true);
+    }
+
+    function updateSegmentField(segId, field, value, rerender) {
+      const seg = state.segments.find(s => s.id === segId);
+      if (!seg) return;
+      seg[field] = value;
+      schedulePlanSave(true); // blur 시점 → 즉시 저장
+      // blur/change 시에만 도착·속력 재계산
+      if (rerender) {
+        renderSegTable();
+      }
+    }
+
+    function selectSegment(segId, zoomTo = true) {
+      if (segId == null || segId === '' || segId === 'undefined') return;
+      const seg = state.segments.find(s => s.id === segId);
+      if (!seg) return;
+      state.selectedSegmentId = segId;
+      state.selectedNodeId = null;
+      renderSegTable();
+      if (zoomTo) setZoomRange(seg.startDist, seg.endDist, true);
+    }
+
+    function updateSegmentButton() {
+      const btn = $('#btn-segments');
+      const exp = $('#btn-export-gpx');
+      const ride = $('#btn-ride-mode');
+      const has = !!(state.currentGpx && state.segments.length);
+      if (btn) {
+        if (has) {
+          btn.style.display = '';
+          btn.title = `구간 목록 (${state.segments.length})`;
+        } else {
+          btn.style.display = 'none';
+          closeSegmentPanel();
+        }
+      }
+      if (exp) exp.style.display = has ? '' : 'none';
+      if (ride) ride.style.display = has ? '' : 'none';
+    }
+
+
+    function formatClockFromMinutes(totalMin) {
+      if (totalMin == null || isNaN(totalMin)) return '--:--';
+      const [sh, sm] = (state.planStartTime || '06:00').split(':').map(Number);
+      let mins = (sh || 0) * 60 + (sm || 0) + Math.round(totalMin);
+      mins = ((mins % (24 * 60)) + 24 * 60) % (24 * 60);
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    }
+
+    function renderSegmentList() { renderSegTable(); }
+    function renderCuesheet() { renderSegTable(); }
+
+
+    /** 노드 선택 → 해당 지점으로 지도 이동 (구간 선택 아님) */
+    function selectNode(nodeId) {
+      state.selectedNodeId = nodeId;
+      state.selectedSegmentId = null;
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (node && state.currentGpx) {
+        const pt = findPointNearDist(state.currentGpx.points, node.dist);
+        if (pt) {
+          centerMapOnPoint(pt);
+          showHoverOnMap(pt);
+        }
+      }
+      renderSegTable();
+    }
+
+    /**
+     * nodes[] 거리 기준 정렬·스냅 후 segments[] 재구성.
+     * 큐 필드(목표시간·파워·휴식 등)는 구간 인덱스 순으로 유지.
+     */
+    function rebuildSegmentsFromNodes() {
+      if (!state.currentGpx || !state.nodes.length) return;
+      const points = state.currentGpx.points;
+      const total = state.currentGpx.totalDistance;
+      const oldSegs = state.segments.slice();
+
+      let nodes = state.nodes.map(n => ({ ...n }));
+      let startNode = nodes.find(n => n.role === 'start');
+      let endNode = nodes.find(n => n.role === 'end');
+      if (!startNode) {
+        startNode = nodes.reduce((a, b) => ((a.dist || 0) <= (b.dist || 0) ? a : b));
+      }
+      if (!endNode || endNode.id === startNode.id) {
+        const others = nodes.filter(n => n.id !== startNode.id);
+        endNode = others.reduce((a, b) => ((a.dist || 0) >= (b.dist || 0) ? a : b));
+      }
+
+      startNode.role = 'start';
+      startNode.dist = 0;
+      startNode.pointIdx = 0;
+      endNode.role = 'end';
+      endNode.dist = total;
+      endNode.pointIdx = Math.max(0, points.length - 1);
+
+      let mid = nodes.filter(n => n.id !== startNode.id && n.id !== endNode.id);
+      mid.forEach(n => {
+        n.role = 'mid';
+        let d = Number(n.dist);
+        if (isNaN(d)) d = total / 2;
+        d = Math.max(0.001, Math.min(total - 0.001, d));
+        const idx = findPointIndexNearDist(points, d);
+        n.pointIdx = idx;
+        n.dist = points[idx].dist;
+      });
+      mid.sort((a, b) => a.dist - b.dist);
+      for (let i = 1; i < mid.length; i++) {
+        if (mid[i].dist <= mid[i - 1].dist) {
+          const idx = Math.min(points.length - 1, mid[i - 1].pointIdx + 1);
+          mid[i].pointIdx = idx;
+          mid[i].dist = points[idx].dist;
+        }
+      }
+
+      nodes = [startNode, ...mid, endNode];
+
+      const newSegs = [];
+      for (let i = 0; i < nodes.length - 1; i++) {
+        const a = nodes[i], b = nodes[i + 1];
+        const prev = oldSegs[i] || {};
+        const segPayload = {
+          startDist: a.dist,
+          endDist: b.dist,
+          startIdx: a.pointIdx,
+          endIdx: b.pointIdx,
+          targetDurationSec: prev.targetDurationSec != null ? prev.targetDurationSec : null,
+          restAfterSec: prev.restAfterSec || 0,
+          targetPower: prev.targetPower != null ? prev.targetPower : null,
+          targetHr: prev.targetHr != null ? prev.targetHr : null,
+          limitPower: prev.limitPower != null ? prev.limitPower : null,
+          limitHr: prev.limitHr != null ? prev.limitHr : null,
+          note: prev.note || ''
+        };
+        if (prev && prev.id) segPayload.id = prev.id;
+        newSegs.push(makeSegment(segPayload));
+      }
+      state.nodes = nodes;
+      state.segments = newSegs;
+      if (state.selectedSegmentId && !newSegs.find(s => s.id === state.selectedSegmentId)) {
+        state.selectedSegmentId = newSegs[0] ? newSegs[0].id : null;
+      }
+    }
+    function updateNodeDistance(nodeId, distKm) {
+      const node = state.nodes.find(n => n.id === nodeId);
+      if (!node || !state.currentGpx) return;
+      if (node.role === 'start' || node.role === 'end') return;
+      const total = state.currentGpx.totalDistance;
+      let d = Number(distKm);
+      if (isNaN(d)) return;
+      node.dist = Math.max(0.001, Math.min(total - 0.001, d));
+      rebuildSegmentsFromNodes();
+      redrawCharts();
+      drawSegmentBoundariesOnMap();
+      updateRouteHighlight(false);
+      renderSegTable();
+      schedulePlanSave(true);
+    }
+    function addNodeFromList(distKm, name) {
+      if (!state.currentGpx) return;
+      const total = state.currentGpx.totalDistance;
+      let d = distKm != null ? Number(distKm) : total / 2;
+      if (isNaN(d)) d = total / 2;
+      d = Math.max(0.05, Math.min(total - 0.05, d));
+      if (state.nodes.some(n => n.role === 'mid' && Math.abs(n.dist - d) < 0.03)) {
+        alert('기존 지점과 너무 가깝습니다.');
+        return;
+      }
+      const idx = findPointIndexNearDist(state.currentGpx.points, d);
+      const snap = state.currentGpx.points[idx].dist;
+      if (snap < 0.05 || snap > total - 0.05) {
+        alert('트랙에 스냅한 위치가 출발/도착과 너무 가깝습니다.');
+        return;
+      }
+      const label = (name && String(name).trim()) || '새 지점';
+      state.nodes.push(makeNode({
+        name: label,
+        dist: snap,
+        pointIdx: idx,
+        role: 'mid'
+      }));
+      rebuildSegmentsFromNodes();
+      const added = state.nodes.find(n => n.role === 'mid' && Math.abs(n.dist - snap) < 0.05);
+      state.selectedNodeId = added ? added.id : null;
+      state.selectedSegmentId = null;
+      redrawCharts();
+      drawSegmentBoundariesOnMap();
+      renderSegTable();
+      schedulePlanSave(true);
+    }
+    function promptAddNode() {
+      if (!state.currentGpx) {
+        alert('GPX를 먼저 불러오세요.');
+        return;
+      }
+      const total = state.currentGpx.totalDistance;
+      const minD = 0.05;
+      const maxD = Math.max(minD, total - 0.05);
+      const nameEl = $('#add-node-name');
+      const distEl = $('#add-node-dist');
+      const hintEl = $('#add-node-dist-hint');
+      const errEl = $('#add-node-dist-error');
+      if (nameEl) nameEl.value = '새 지점';
+      if (distEl) distEl.value = (total / 2).toFixed(1);
+      if (hintEl) {
+        hintEl.textContent = '허용 범위: ' + minD.toFixed(1) + ' ~ ' + maxD.toFixed(1) + ' km (총 ' + total.toFixed(1) + ' km)';
+      }
+      if (errEl) {
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+      }
+      openModal('add-node-modal');
+      setTimeout(() => { if (nameEl) nameEl.focus(); }, 50);
+    }
+
+    function validateAddNodeDist(raw) {
+      if (!state.currentGpx) return { ok: false, msg: 'GPX가 없습니다.' };
+      const total = state.currentGpx.totalDistance;
+      const minD = 0.05;
+      const maxD = Math.max(minD, total - 0.05);
+      const s = String(raw == null ? '' : raw).trim().replace(',', '.');
+      if (s === '') return { ok: false, msg: '거리를 입력하세요.' };
+      const d = Number(s);
+      if (isNaN(d)) return { ok: false, msg: '숫자를 입력하세요.' };
+      if (d < minD || d > maxD) {
+        return { ok: false, msg: minD.toFixed(1) + ' ~ ' + maxD.toFixed(1) + ' km 범위여야 합니다.' };
+      }
+      if (state.nodes.some(n => n.role === 'mid' && Math.abs(n.dist - d) < 0.03)) {
+        return { ok: false, msg: '기존 지점과 너무 가깝습니다.' };
+      }
+      return { ok: true, dist: d };
+    }
+
+    function confirmAddNodeFromModal() {
+      const nameEl = $('#add-node-name');
+      const distEl = $('#add-node-dist');
+      const errEl = $('#add-node-dist-error');
+      const name = (nameEl && nameEl.value.trim()) || '새 지점';
+      const v = validateAddNodeDist(distEl ? distEl.value : '');
+      if (!v.ok) {
+        if (errEl) {
+          errEl.textContent = v.msg;
+          errEl.style.display = 'block';
+        }
+        if (distEl) distEl.focus();
+        return;
+      }
+      if (errEl) errEl.style.display = 'none';
+      closeModal('add-node-modal');
+      addNodeFromList(v.dist, name);
+    }
+    function renderSegTable() {
+      const tbody = $('#seg-tbody');
+      if (!tbody) return;
+      const nameEl = $('#seg-route-name');
+      const metaEl = $('#seg-route-meta');
+      if (state.currentGpx) {
+        if (nameEl) nameEl.textContent = state.currentGpx.name || '이름 없음';
+        if (metaEl) {
+          let gain = 0;
+          const pts = state.currentGpx.points || [];
+          for (let i = 1; i < pts.length; i++) {
+            const d = (pts[i].ele || 0) - (pts[i - 1].ele || 0);
+            if (d > 0) gain += d;
+          }
+          metaEl.textContent = (state.currentGpx.totalDistance || 0).toFixed(1) + ' km · ' + Math.round(gain) + ' m';
+        }
+      } else {
+        if (nameEl) nameEl.textContent = '—';
+        if (metaEl) metaEl.textContent = '';
+      }
+      if (!state.segments.length || !state.nodes.length) {
+        tbody.innerHTML = '<tr><td colspan="16" class="empty-seg">GPX를 불러오면 큐시트가 표시됩니다.</td></tr>';
+        return;
+      }
+
+      const points = state.currentGpx.points;
+      let cumMin = 0;
+      let hasSchedule = false;
+      const rows = [];
+
+      state.nodes.forEach((node, ni) => {
+        const isStart = node.role === 'start' || ni === 0;
+        const isEnd = node.role === 'end' || ni === state.nodes.length - 1;
+        const isEndpoint = node.role === 'start' || node.role === 'end';
+        const segOut = !isEnd ? state.segments[ni] : null;
+        const segIn = ni > 0 ? state.segments[ni - 1] : null;
+
+        const elevAt = (pointIdx, dist) => {
+          if (points[pointIdx]) return Math.round(points[pointIdx].ele || 0);
+          const p = findPointNearDist(points, dist);
+          return p ? Math.round(p.ele || 0) : 0;
+        };
+
+        const arrivalClock = isStart
+          ? formatClockFromMinutes(0)
+          : (hasSchedule ? formatClockFromMinutes(cumMin) : '--:--');
+
+        let restMin = 0;
+        if (segIn && segIn.restAfterSec > 0) {
+          restMin = segIn.restAfterSec / 60;
+          cumMin += restMin;
+          hasSchedule = true;
+        }
+
+        const nodeActive = node.id === state.selectedNodeId ? ' active' : '';
+        const delDis = isEndpoint ? ' disabled' : '';
+        const restDis = isEndpoint ? ' disabled' : '';
+        const distInput = isEndpoint
+          ? `<span class="readonly num">${(node.dist || 0).toFixed(1)}</span>`
+          : `<input class="dist-input" inputmode="decimal" data-node-id="${node.id}" data-field="nodeDist" value="${(node.dist || 0).toFixed(1)}" title="거리(km)">`;
+
+        // 지점 행
+        rows.push(`<tr class="node-row${nodeActive}" data-node-id="${node.id}" data-ni="${ni}">
+          <td class="act-btns">
+            <button type="button" class="btn-del-node" data-node-id="${node.id}" title="지점 삭제"${delDis}>🗑</button>
+            <button type="button" class="btn-add-rest-node" data-node-id="${node.id}" title="이 지점에서 휴식"${restDis}>☕</button>
+          </td>
+          <td class="num">${ni + 1}</td>
+          <td><input class="name-input" data-node-id="${node.id}" data-field="nodeName" value="${escapeHtml(node.name)}" title="${escapeHtml(node.name)}"></td>
+          <td class="num">${distInput}</td>
+          <td class="readonly num">${elevAt(node.pointIdx, node.dist)}</td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x col-arrive readonly num">${arrivalClock}</td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+          <td class="col-x cell-muted"> </td>
+        </tr>`);
+
+        // 휴식: 이동거리·고도차·획고 표시 없음
+        if (restMin > 0) {
+          const restEnd = formatClockFromMinutes(cumMin);
+          rows.push(`<tr class="rest-between" data-rest-of="${segIn.id}">
+            <td class="node-side act-btns">
+              <button type="button" class="btn-clear-rest" data-id="${segIn.id}" title="휴식 삭제">✕</button>
+            </td>
+            <td class="node-side"></td>
+            <td class="node-side" colspan="3" style="color:#c4b5fd;font-size:11px;">☕ 휴식</td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x">
+              <input inputmode="decimal" data-id="${segIn.id}" data-field="restAfterMin" value="${Math.round(restMin)}" placeholder="분">
+            </td>
+            <td class="seg-side col-x col-arrive readonly num">${restEnd}</td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+            <td class="seg-side col-x cell-muted"> </td>
+          </tr>`);
+        }
+
+        if (isEnd) return;
+
+        const st = computeSegmentStats(segOut);
+        const durSec = segOut.targetDurationSec;
+        if (durSec != null) {
+          cumMin += durSec / 60;
+          hasSchedule = true;
+        }
+        const speed = (durSec && st.distance > 0) ? (st.distance / (durSec / 3600)) : null;
+        const elevDiff = Math.round(st.endEle - st.startEle);
+        const elevDiffStr = (elevDiff > 0 ? '+' : '') + elevDiff;
+        const durVal = durSec != null ? String(Math.round(durSec / 60)) : '';
+        const half = (ni + 0.5).toString();
+        const segActive = segOut.id === state.selectedSegmentId ? ' active' : '';
+
+        rows.push(`<tr class="seg-between${segActive}" data-seg-id="${segOut.id}">
+          <td class="node-side"></td>
+          <td class="node-side"><span class="half-idx">${half}</span></td>
+          <td class="node-side"></td>
+          <td class="node-side"></td>
+          <td class="node-side"></td>
+          <td class="seg-side col-x readonly num">${st.distance.toFixed(1)}</td>
+          <td class="seg-side col-x readonly num">${elevDiffStr}</td>
+          <td class="seg-side col-x readonly num">${Math.round(st.elevGain)}</td>
+          <td class="seg-side col-x"><input inputmode="decimal" data-id="${segOut.id}" data-field="targetDurationMin" value="${durVal}" placeholder="분"></td>
+          <td class="seg-side col-x cell-muted"> </td>
+          <td class="seg-side col-x col-speed readonly num">${speed != null ? speed.toFixed(1) : '--.-'}</td>
+          <td class="seg-side col-x"><input inputmode="decimal" data-id="${segOut.id}" data-field="targetPower" value="${segOut.targetPower ?? ''}" placeholder="W"></td>
+          <td class="seg-side col-x"><input inputmode="decimal" data-id="${segOut.id}" data-field="limitPower" value="${segOut.limitPower ?? ''}" placeholder="W"></td>
+          <td class="seg-side col-x"><input inputmode="decimal" data-id="${segOut.id}" data-field="targetHr" value="${segOut.targetHr ?? ''}" placeholder="bpm"></td>
+          <td class="seg-side col-x"><input inputmode="decimal" data-id="${segOut.id}" data-field="limitHr" value="${segOut.limitHr ?? ''}" placeholder="bpm"></td>
+          <td class="seg-side col-x"><input class="note-input" data-id="${segOut.id}" data-field="note" value="${escapeHtml(segOut.note || '')}"></td>
+        </tr>`);
+      });
+
+      tbody.innerHTML = rows.join('');
+
+      tbody.querySelectorAll('tr.node-row').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('input')) return;
+          selectNode(tr.dataset.nodeId);
+        });
+      });
+      tbody.querySelectorAll('tr.seg-between').forEach(tr => {
+        tr.addEventListener('click', (e) => {
+          if (e.target.closest('button') || e.target.closest('input')) return;
+          selectSegment(tr.dataset.segId, true);
+        });
+      });
+      tbody.querySelectorAll('.btn-del-node').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (btn.disabled) return;
+          if (confirm('이 지점을 삭제하고 양쪽 구간을 합칠까요?')) deleteNode(btn.dataset.nodeId);
+        });
+      });
+      tbody.querySelectorAll('.btn-add-rest-node').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (btn.disabled) return;
+          addRestAtNode(btn.dataset.nodeId);
+        });
+      });
+      tbody.querySelectorAll('.btn-clear-rest').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          clearRestAfter(btn.dataset.id);
+        });
+      });
+      tbody.querySelectorAll('input').forEach(inp => {
+        if (inp.readOnly) {
+          inp.addEventListener('click', (e) => e.stopPropagation());
+          return;
+        }
+        const applyValue = () => {
+          const field = inp.dataset.field;
+          const raw = inp.value.trim();
+          if (field === 'nodeName') {
+            renameNode(inp.dataset.nodeId, raw);
+            return;
+          }
+          if (field === 'nodeDist') {
+            const n = Number(raw);
+            if (!isNaN(n)) updateNodeDistance(inp.dataset.nodeId, n);
+            return;
+          }
+          const id = inp.dataset.id;
+          if (field === 'note') { updateSegmentField(id, 'note', raw, false); return; }
+          if (field === 'targetDurationMin') {
+            const n = raw === '' ? null : Number(raw);
+            updateSegmentField(id, 'targetDurationSec', n == null || isNaN(n) ? null : Math.max(0, n) * 60, true);
+            return;
+          }
+          if (field === 'restAfterMin') {
+            const n = raw === '' ? 0 : Number(raw);
+            updateSegmentField(id, 'restAfterSec', isNaN(n) ? 0 : Math.max(0, n) * 60, true);
+            return;
+          }
+          if (['targetPower', 'targetHr', 'limitPower', 'limitHr'].includes(field)) {
+            const n = raw === '' ? null : Number(raw);
+            updateSegmentField(id, field, n == null || isNaN(n) ? null : n, false);
+          }
+        };
+        inp.addEventListener('change', applyValue);
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') { e.preventDefault(); inp.blur(); }
+        });
+        inp.addEventListener('click', (e) => e.stopPropagation());
+      });
+    }
+
+    function openSegmentPanel() {
+      state.segmentPanelOpen = true;
+      const sb = $('#segment-sidebar');
+      if (sb) sb.classList.add('open');
+      $('#btn-segments')?.classList.add('active');
+      if (state.waypointPanelOpen) closeWaypointPanel();
+      renderSegTable();
+      const stInput = $('#cs-start-time');
+      if (stInput && !stInput.value) stInput.value = state.planStartTime || '06:00';
+      setTimeout(() => { if (state.map && state.map.relayout) state.map.relayout(); }, 220);
+    }
+
+    function closeSegmentPanel() {
+      state.segmentPanelOpen = false;
+      state.cuesheetOpen = false;
+      const sb = $('#segment-sidebar');
+      if (sb) {
+        sb.classList.remove('open');
+        sb.classList.remove('expanded');
+      }
+      $('#btn-segments')?.classList.remove('active');
+      const exp = $('#seg-expand-btn');
+      if (exp) exp.textContent = '▶';
+      setTimeout(() => { if (state.map && state.map.relayout) state.map.relayout(); }, 220);
+    }
+
+    function toggleSegmentPanel() {
+      if (state.segmentPanelOpen) closeSegmentPanel();
+      else openSegmentPanel();
+    }
+
+    function toggleCuesheet() {
+      if (!state.segmentPanelOpen) openSegmentPanel();
+      state.cuesheetOpen = !state.cuesheetOpen;
+      const sb = $('#segment-sidebar');
+      const exp = $('#seg-expand-btn');
+      if (state.cuesheetOpen) {
+        sb?.classList.add('expanded');
+        if (exp) exp.textContent = '◀';
+      } else {
+        sb?.classList.remove('expanded');
+        if (exp) exp.textContent = '▶';
+      }
+      setTimeout(() => {
+        if (state.map && state.map.relayout) state.map.relayout();
+        if (state.currentGpx) redrawCharts();
+      }, 220);
+    }
+
+    function exportGpxWithPlan() {
+      if (!state.currentGpxText || !state.currentGpx) {
+        alert('내보낼 GPX가 없습니다.');
+        return;
+      }
+      let xml;
+      try {
+        xml = new DOMParser().parseFromString(state.currentGpxText, 'text/xml');
+      } catch (e) {
+        alert('원본 GPX를 파싱할 수 없습니다.');
+        return;
+      }
+      const gpxEl = xml.documentElement;
+      if (!gpxEl || gpxEl.localName !== 'gpx') {
+        alert('유효한 GPX가 아닙니다.');
+        return;
+      }
+      // rh 네임스페이스
+      gpxEl.setAttribute('xmlns:rh', 'https://gpx-riding-helper.local/ns');
+
+      // 기존 rh 확장 제거 후 재작성
+      xml.querySelectorAll('ridingHelper, rh\\:ridingHelper').forEach(n => n.remove());
+
+      let trk = xml.querySelector('trk');
+      if (!trk) {
+        trk = xml.createElementNS(gpxEl.namespaceURI || 'http://www.topografix.com/GPX/1/1', 'trk');
+        gpxEl.appendChild(trk);
+      }
+      let ext = null;
+      for (const child of Array.from(trk.children)) {
+        if (child.localName === 'extensions') { ext = child; break; }
+      }
+      if (!ext) {
+        ext = xml.createElementNS(gpxEl.namespaceURI || 'http://www.topografix.com/GPX/1/1', 'extensions');
+        trk.insertBefore(ext, trk.firstChild);
+      }
+      // 기존 rh:ridingHelper 제거
+      Array.from(ext.children).forEach(c => {
+        if (c.localName === 'ridingHelper') ext.removeChild(c);
+      });
+
+      const rh = xml.createElementNS('https://gpx-riding-helper.local/ns', 'rh:ridingHelper');
+      rh.setAttribute('version', '1');
+      const plan = xml.createElementNS('https://gpx-riding-helper.local/ns', 'rh:plan');
+      plan.setAttribute('startTime', state.planStartTime || '');
+      state.segments.forEach(s => {
+        const el = xml.createElementNS('https://gpx-riding-helper.local/ns', 'rh:segment');
+        el.setAttribute('id', s.id);
+        el.setAttribute('name', s.name || '');
+        el.setAttribute('startDist', String(s.startDist));
+        el.setAttribute('endDist', String(s.endDist));
+        if (s.targetDurationSec != null) el.setAttribute('targetDuration', String(s.targetDurationSec));
+        if (s.restAfterSec) el.setAttribute('restAfter', String(s.restAfterSec));
+        if (s.targetPower != null) el.setAttribute('targetPower', String(s.targetPower));
+        if (s.targetHr != null) el.setAttribute('targetHr', String(s.targetHr));
+        if (s.limitPower != null) el.setAttribute('limitPower', String(s.limitPower));
+        if (s.limitHr != null) el.setAttribute('limitHr', String(s.limitHr));
+        if (s.note) el.setAttribute('note', s.note);
+        plan.appendChild(el);
+      });
+      rh.appendChild(plan);
+      ext.appendChild(rh);
+
+      const serializer = new XMLSerializer();
+      let out = serializer.serializeToString(xml);
+      if (!out.startsWith('<?xml')) out = '<?xml version="1.0" encoding="UTF-8"?>\n' + out;
+      const blob = new Blob([out], { type: 'application/gpx+xml' });
+      const a = document.createElement('a');
+      const base = (state.currentGpx.name || 'route').replace(/\.gpx$/i, '');
+      a.href = URL.createObjectURL(blob);
+      a.download = base + '-plan.gpx';
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+
+    // 차트에 구간 경계 세로선 표시
+    function drawSegmentBoundaries(ctx, pad, viewMin, viewMax, viewSpan, cW, cH) {
+      if (!state.segments || state.segments.length < 2) return;
+      ctx.save();
+      state.segments.forEach((seg, i) => {
+        if (i === 0) return; // 시작 경계는 스킵
+        const d = seg.startDist;
+        if (d < viewMin - 0.001 || d > viewMax + 0.001) return;
+        const x = pad.left + ((d - viewMin) / viewSpan) * cW;
+        ctx.strokeStyle = 'rgba(255, 200, 80, 0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x, pad.top);
+        ctx.lineTo(x, pad.top + cH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        // 작은 라벨
+        ctx.fillStyle = 'rgba(255, 200, 80, 0.9)';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✂', x, pad.top + 10);
+      });
+      ctx.restore();
+    }
+
+    // ===== 차트 컨텍스트 메뉴 =====
+    function showChartContextMenu(clientX, clientY, distKm) {
+      const menu = $('#chart-ctx-menu');
+      if (!menu) return;
+      state.chartCtx = { dist: distKm, clientX, clientY };
+      menu.style.display = 'block';
+      const mw = menu.offsetWidth;
+      const mh = menu.offsetHeight;
+      let left = clientX;
+      let top = clientY;
+      if (left + mw > window.innerWidth - 8) left = window.innerWidth - mw - 8;
+      if (top + mh > window.innerHeight - 8) top = window.innerHeight - mh - 8;
+      if (left < 8) left = 8;
+      if (top < 8) top = 8;
+      menu.style.left = left + 'px';
+      menu.style.top = top + 'px';
+
+      // 로드뷰 가능 여부 비동기 확인
+      const rvBtn = menu.querySelector('button[data-action="roadview"]');
+      if (rvBtn) {
+        rvBtn.disabled = true;
+        rvBtn.title = '로드뷰 확인 중…';
+        const geo = pointFromChartDist(distKm);
+        if (!geo || !window.kakao || !kakao.maps || !kakao.maps.RoadviewClient) {
+          rvBtn.title = '로드뷰를 사용할 수 없습니다';
+          return;
+        }
+        const pos = new kakao.maps.LatLng(geo.lat, geo.lon);
+        const client = new kakao.maps.RoadviewClient();
+        const apply = (ok) => {
+          // 메뉴가 같은 컨텍스트일 때만
+          if (!state.chartCtx || state.chartCtx.dist !== distKm) return;
+          rvBtn.disabled = !ok;
+          rvBtn.title = ok ? '이 지점 카카오 로드뷰' : '이 지점 근처 로드뷰 없음';
+        };
+        client.getNearestPanoId(pos, 50, (id) => {
+          if (id) apply(true);
+          else client.getNearestPanoId(pos, 200, (id2) => apply(!!id2));
+        });
+      }
+    }
+
+    function hideChartContextMenu() {
+      const menu = $('#chart-ctx-menu');
+      if (menu) menu.style.display = 'none';
+      state.chartCtx = null;
+    }
+
+    function handleChartContextAction(action) {
+      const ctx = state.chartCtx;
+      hideChartContextMenu();
+      if (!ctx || !state.currentGpx) return;
+      if (action === 'split-segment') {
+        if (splitSegmentAtDist(ctx.dist)) {
+          openSegmentPanel();
+        }
+      } else if (action === 'roadview') {
+        openRoadviewAtDist(ctx.dist);
+      }
+    }
+
+    // ===== 카카오 로드뷰 =====
+    function openRoadviewAtDist(distKm) {
+      const pt = pointFromChartDist(distKm);
+      if (!pt) {
+        alert('위치를 찾을 수 없습니다.');
+        return;
+      }
+      openRoadviewAtLatLng(pt.lat, pt.lon, distKm);
+    }
+
+    function openRoadviewAtLatLng(lat, lon, distKm) {
+      const overlay = $('#roadview-overlay');
+      const status = $('#roadview-status');
+      const meta = $('#roadview-meta');
+      if (!overlay) return;
+      overlay.classList.remove('hidden');
+      if (status) {
+        status.classList.remove('hidden');
+        status.textContent = '로드뷰를 불러오는 중...';
+      }
+      if (meta) {
+        meta.textContent = distKm != null
+          ? `${distKm.toFixed(2)} km · ${lat.toFixed(5)}, ${lon.toFixed(5)}`
+          : `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+      }
+
+      if (!window.kakao || !kakao.maps) {
+        if (status) status.textContent = '지도 API가 로드되지 않았습니다.';
+        return;
+      }
+
+      const container = $('#roadview-container');
+      container.innerHTML = '';
+      const position = new kakao.maps.LatLng(lat, lon);
+
+      // 오버레이가 표시된 뒤 레이아웃이 잡힌 다음 로드뷰 생성 (높이 0 방지)
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const rvClient = new kakao.maps.RoadviewClient();
+          rvClient.getNearestPanoId(position, 50, function(panoId) {
+            if (!panoId) {
+              rvClient.getNearestPanoId(position, 300, function(panoId2) {
+                if (!panoId2) {
+                  if (status) status.textContent = '이 지점 근처에 로드뷰가 없습니다.';
+                  return;
+                }
+                showRoadviewWithPano(container, status, panoId2, position);
+              });
+              return;
+            }
+            showRoadviewWithPano(container, status, panoId, position);
+          });
+        });
+      });
+    }
+
+    function showRoadviewWithPano(container, status, panoId, position) {
+      // 컨테이너 크기가 확보됐는지 확인
+      const w = container.clientWidth;
+      const h = container.clientHeight;
+      if (w < 10 || h < 10) {
+        // 한 프레임 더 기다린 뒤 재시도
+        setTimeout(() => showRoadviewWithPano(container, status, panoId, position), 50);
+        return;
+      }
+      const rv = new kakao.maps.Roadview(container);
+      state.roadview = rv;
+      rv.setPanoId(panoId, position);
+      const hideStatus = () => { if (status) status.classList.add('hidden'); };
+      kakao.maps.event.addListener(rv, 'init', function() {
+        hideStatus();
+        // 타일 렌더 후 크기 재계산
+        try { if (typeof rv.relayout === 'function') rv.relayout(); } catch (_) {}
+      });
+      setTimeout(() => {
+        hideStatus();
+        try { if (typeof rv.relayout === 'function') rv.relayout(); } catch (_) {}
+      }, 800);
+    }
+
+    function closeRoadview() {
+      $('#roadview-overlay').classList.add('hidden');
+      const container = $('#roadview-container');
+      if (container) container.innerHTML = '';
+      state.roadview = null;
+    }
+
+    /** 줌 구간에 맞춰 전체 경로(연함) + 선택 구간(진함) 표시, 필요 시 센터링 */
+    function updateRouteHighlight(centerOnFocus = false) {
+      if (!state.map || !state.currentGpx) return;
+      const points = state.currentGpx.points;
+      const total = state.currentGpx.totalDistance;
+      const zoom = getZoomRange(total);
+      const isFull = zoom.minDist <= 0.001 && zoom.maxDist >= total - 0.001;
+
+      if (state.polylineDim) { state.polylineDim.setMap(null); state.polylineDim = null; }
+      if (state.polylineFocus) { state.polylineFocus.setMap(null); state.polylineFocus = null; }
+
+      const allPath = points.map(p => new kakao.maps.LatLng(p.lat, p.lon));
+
+      if (isFull) {
+        state.polylineFocus = new kakao.maps.Polyline({
+          path: allPath, strokeWeight: 5, strokeColor: '#4a9eff',
+          strokeOpacity: 0.9, strokeStyle: 'solid'
+        });
+        state.polylineFocus.setMap(state.map);
+        if (centerOnFocus) {
+          const bounds = new kakao.maps.LatLngBounds();
+          allPath.forEach(ll => bounds.extend(ll));
+          state.map.setBounds(bounds);
+        }
+        return;
+      }
+
+      // 전체: 연한 회색
+      state.polylineDim = new kakao.maps.Polyline({
+        path: allPath, strokeWeight: 4, strokeColor: '#888888',
+        strokeOpacity: 0.35, strokeStyle: 'solid'
+      });
+      state.polylineDim.setMap(state.map);
+
+      // 선택 구간: 강조
+      const focusPts = pointsInDistRange(points, zoom.minDist, zoom.maxDist);
+      if (focusPts.length >= 2) {
+        const focusPath = focusPts.map(p => new kakao.maps.LatLng(p.lat, p.lon));
+        state.polylineFocus = new kakao.maps.Polyline({
+          path: focusPath, strokeWeight: 6, strokeColor: '#4a9eff',
+          strokeOpacity: 0.95, strokeStyle: 'solid'
+        });
+        state.polylineFocus.setMap(state.map);
+        if (centerOnFocus) {
+          const bounds = new kakao.maps.LatLngBounds();
+          focusPath.forEach(ll => bounds.extend(ll));
+          state.map.setBounds(bounds);
+        }
+      }
+    }
+
+    function showHoverOnMap(point) {
+      if (!state.map || !point) return;
+      const pos = new kakao.maps.LatLng(point.lat, point.lon);
+      if (!state.hoverMarker) {
+        // Marker 사용 (Circle에는 setPosition이 없어 위치가 갱신되지 않음)
+        state.hoverMarker = new kakao.maps.Marker({
+          position: pos,
+          zIndex: 30,
+          clickable: false
+        });
+        state.hoverMarker.setMap(state.map);
+      } else {
+        state.hoverMarker.setPosition(pos);
+      }
+    }
+
+    function hideHoverOnMap() {
+      if (state.hoverMarker) {
+        state.hoverMarker.setMap(null);
+        state.hoverMarker = null;
+      }
+    }
+
+    function centerMapOnPoint(point) {
+      if (!state.map || !point) return;
+      state.map.panTo(new kakao.maps.LatLng(point.lat, point.lon));
+    }
+
+    function pointFromChartDist(dist) {
+      if (!state.currentGpx) return null;
+      return findPointNearDist(state.currentGpx.points, dist);
+    }
+
+    // ===== Strava-inspired preprocessing =====
+    function prepareGradeData(points, resampleMeters, smoothWindow, gradeWindowMeters) {
+      if (points.length < 2) return [];
+      const totalDistM = points[points.length - 1].dist * 1000;
+      const step = Math.max(resampleMeters, 5);
+      const resampled = [];
+
+      // 1) Resample
+      for (let d = 0; d <= totalDistM; d += step) {
+        const distKm = d / 1000;
+        let i = 0;
+        while (i < points.length - 1 && points[i + 1].dist < distKm) i++;
+        if (i >= points.length - 1) {
+          resampled.push({ dist: points[points.length - 1].dist, ele: points[points.length - 1].ele });
+          break;
+        }
+        const p0 = points[i], p1 = points[i + 1];
+        const segLen = (p1.dist - p0.dist) || 0.0001;
+        const t = Math.max(0, Math.min(1, (distKm - p0.dist) / segLen));
+        resampled.push({ dist: distKm, ele: p0.ele + (p1.ele - p0.ele) * t });
+      }
+
+      // 2) Moving average
+      let smoothed = resampled;
+      if (smoothWindow > 0 && resampled.length > smoothWindow) {
+        const half = Math.floor(smoothWindow / 2);
+        smoothed = resampled.map((p, idx) => {
+          let sum = 0, cnt = 0;
+          for (let j = idx - half; j <= idx + half; j++) {
+            if (j >= 0 && j < resampled.length) { sum += resampled[j].ele; cnt++; }
+          }
+          return { dist: p.dist, ele: sum / cnt };
+        });
+      }
+
+      // 3) Wide-window grade (Strava-like)
+      const halfWinKm = (gradeWindowMeters / 2) / 1000;
+      const result = [];
+      for (let i = 0; i < smoothed.length; i++) {
+        const cur = smoothed[i];
+        let iStart = i, iEnd = i;
+        while (iStart > 0 && (cur.dist - smoothed[iStart].dist) < halfWinKm) iStart--;
+        while (iEnd < smoothed.length - 1 && (smoothed[iEnd].dist - cur.dist) < halfWinKm) iEnd++;
+        const dDist = (smoothed[iEnd].dist - smoothed[iStart].dist) * 1000;
+        const dEle = smoothed[iEnd].ele - smoothed[iStart].ele;
+        let grade = dDist > 1 ? (dEle / dDist) * 100 : 0;
+        grade = Math.max(-50, Math.min(50, grade));
+        result.push({ dist: cur.dist, ele: cur.ele, grade });
+      }
+      return result;
+    }
+
+    function clamp(v) { return Math.max(0, Math.min(255, Math.round(v))); }
+
+    /**
+     * 경사 → 세기 t ∈ [0, 1)
+     * 데드존 이하는 0, 그 위는 t = g'/(g'+k)  (저경사 민감, 고경사 포화)
+     */
+    function gradeIntensity(grade, deadzone, k) {
+      const dz = deadzone != null ? deadzone : (state.settings.gradeDeadzone ?? 0.2);
+      const kk = k != null ? k : (state.settings.gradeK ?? 4);
+      const g = Math.max(0, Math.abs(grade) - dz);
+      if (g <= 0) return 0;
+      return g / (g + kk);
+    }
+
+    /**
+     * 영역/라인 색상
+     * mode: blend | pure-alpha | pure-alpha-floor | heat
+     * forArea: 영역용 알파 스케일
+     */
+    function gradeToColor(grade, mode, forArea = false) {
+      mode = mode || state.settings.areaColorMode || 'blend';
+      const t = gradeIntensity(grade);
+      const absG = Math.abs(grade);
+      const dz = state.settings.gradeDeadzone ?? 0.2;
+
+      // 평지
+      if (t <= 0 || absG < dz) {
+        return forArea ? 'rgba(120,120,120,0.06)' : 'rgba(150,150,150,0.45)';
+      }
+
+      if (mode === 'pure-alpha') {
+        const a = forArea ? (0.05 + t * 0.5) : t;
+        if (grade > 0) return `rgba(255,0,0,${a})`;
+        return `rgba(0,0,255,${a})`;
+      }
+
+      if (mode === 'pure-alpha-floor') {
+        const a = forArea ? (0.12 + t * 0.4) : (0.35 + t * 0.65);
+        if (grade > 0) return `rgba(255,0,0,${a})`;
+        return `rgba(0,0,255,${a})`;
+      }
+
+      if (mode === 'heat') {
+        if (grade > 0) {
+          const r = 255;
+          const g = Math.round(220 - t * 220);
+          const b = Math.round(40 - t * 40);
+          const a = forArea ? (0.15 + t * 0.45) : (0.5 + t * 0.5);
+          return `rgba(${r},${clamp(g)},${clamp(b)},${a})`;
+        }
+        const a = forArea ? (0.08 + t * 0.25) : (0.35 + t * 0.4);
+        return `rgba(80,140,255,${a})`;
+      }
+
+      // blend
+      if (grade > 0) {
+        const r = Math.round(210 + t * 45);
+        const g = Math.round(120 - t * 100);
+        const b = Math.round(90 - t * 70);
+        const a = forArea ? (0.15 + t * 0.35) : 1;
+        return `rgba(${clamp(r)},${clamp(g)},${clamp(b)},${a})`;
+      } else {
+        const r = Math.round(90 - t * 60);
+        const g = Math.round(140 - t * 50);
+        const b = Math.round(210 + t * 45);
+        const a = forArea ? (0.15 + t * 0.35) : 1;
+        return `rgba(${clamp(r)},${clamp(g)},${clamp(b)},${a})`;
+      }
+    }
+
+    const AREA_COLOR_MODES = [
+      { id: 'blend', title: 'RGB 블렌드', desc: '비선형 세기 t=g\'/(g\'+k)로 RGB 보간. 완경사 민감, 급경사 포화.' },
+      { id: 'pure-alpha', title: '순수색 + 불투명도', desc: '(255,0,0)/(0,0,255) + opacity=t. 같은 비선형 매핑.' },
+      { id: 'pure-alpha-floor', title: '순수색 + 불투명도(하한)', desc: '순수색 + opacity 하한 적용. 완경사도 라인이 잘 보임.' },
+      { id: 'heat', title: '히트맵 (상승 강조)', desc: '상승 노랑→빨강, 하강 연한 파랑. 세기 매핑 동일.' }
+    ];
+
+    function niceStep(range, maxTicks) {
+      if (range <= 0) return 1;
+      const rough = range / maxTicks;
+      const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+      const residual = rough / mag;
+      let nice;
+      if (residual <= 1.5) nice = 1;
+      else if (residual <= 3) nice = 2;
+      else if (residual <= 7) nice = 5;
+      else nice = 10;
+      return nice * mag;
+    }
+
+    function buildTicks(min, max, maxTicks) {
+      const step = niceStep(max - min, maxTicks);
+      const start = Math.ceil(min / step) * step;
+      const ticks = [];
+      for (let v = start; v <= max + step * 0.01; v += step) {
+        ticks.push(Math.round(v * 1000) / 1000);
+      }
+      return { ticks, step };
+    }
+
+
+    function getZoomRange(totalDistance) {
+      let minD = state.chartZoom.minDist ?? 0;
+      let maxD = state.chartZoom.maxDist;
+      if (maxD == null || maxD <= minD) maxD = totalDistance;
+      minD = Math.max(0, minD);
+      maxD = Math.min(totalDistance, maxD);
+      if (maxD - minD < 0.05) { // 최소 50m
+        const mid = (minD + maxD) / 2;
+        minD = Math.max(0, mid - 0.025);
+        maxD = Math.min(totalDistance, mid + 0.025);
+      }
+      return { minDist: minD, maxDist: maxD };
+    }
+
+    function setZoomRange(minDist, maxDist, centerMap = true) {
+      if (!state.currentGpx) return;
+      const total = state.currentGpx.totalDistance;
+      let a = Math.max(0, Math.min(minDist, maxDist));
+      let b = Math.min(total, Math.max(minDist, maxDist));
+      if (b - a < 0.05) return;
+      state.chartZoom = { minDist: a, maxDist: b };
+      redrawCharts();
+      updateRouteHighlight(centerMap);
+    }
+
+    function resetZoom() {
+      if (!state.currentGpx) return;
+      state.chartZoom = { minDist: 0, maxDist: state.currentGpx.totalDistance };
+      redrawCharts();
+      updateRouteHighlight(true);
+    }
+
+    function redrawCharts() {
+      if (!state.currentGpx) return;
+      const { points, totalDistance } = state.currentGpx;
+      drawElevationChart(points, totalDistance);
+      drawMinimap(points, totalDistance);
+    }
+
+    function drawElevationChart(points, totalDistance) {
+      const canvas = $('#elevation-chart');
+      const placeholder = $('#chart-placeholder');
+      const tooltip = $('#chart-tooltip');
+      const minimapWrap = $('#minimap-wrap');
+      if (!points.length) {
+        placeholder.classList.remove('hidden');
+        if (tooltip) tooltip.style.display = 'none';
+        if (minimapWrap) minimapWrap.classList.add('hidden');
+        state.chartHover = null;
+        return;
+      }
+      placeholder.classList.add('hidden');
+      if (minimapWrap) minimapWrap.classList.remove('hidden');
+
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const wrap = $('#chart-main-wrap');
+      const rect = wrap.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const W = rect.width, H = rect.height;
+      const pad = { top: 14, right: 16, bottom: 36, left: 48 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+
+      // Y축: 전체 코스 고도 범위 고정
+      let minE = 0, maxE = -Infinity;
+      points.forEach(p => {
+        if (p.ele < minE) minE = p.ele;
+        if (p.ele > maxE) maxE = p.ele;
+      });
+      if (maxE < 50) maxE = 50;
+      maxE *= 1.05;
+
+      const yInfo = buildTicks(minE, maxE, 5);
+      const yMin = Math.min(minE, yInfo.ticks[0] ?? minE);
+      const yMax = Math.max(maxE, yInfo.ticks[yInfo.ticks.length - 1] ?? maxE);
+
+      // X축: 줌 범위
+      const zoom = getZoomRange(totalDistance);
+      const viewMin = zoom.minDist;
+      const viewMax = zoom.maxDist;
+      const viewSpan = viewMax - viewMin || 0.001;
+
+      const xInfo = buildTicks(viewMin, viewMax, 6);
+
+      const light = state.chartTheme === 'light';
+      const colBg = light ? '#f4f4f4' : '#1e1e1e';
+      const colGrid = light ? '#ddd' : '#333';
+      const colLabel = light ? '#444' : '#888';
+
+      ctx.fillStyle = colBg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = colGrid;
+      ctx.fillStyle = colLabel;
+      ctx.font = '11px sans-serif';
+      ctx.lineWidth = 1;
+
+      yInfo.ticks.forEach(ele => {
+        const y = pad.top + cH - ((ele - yMin) / (yMax - yMin)) * cH;
+        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cW, y); ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(ele) + 'm', pad.left - 6, y + 4);
+      });
+
+      xInfo.ticks.forEach(dist => {
+        if (dist < viewMin - 0.001 || dist > viewMax + 0.001) return;
+        const x = pad.left + ((dist - viewMin) / viewSpan) * cW;
+        ctx.beginPath(); ctx.moveTo(x, pad.top); ctx.lineTo(x, pad.top + cH); ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.fillText(dist.toFixed(dist >= 10 ? 0 : 1) + 'km', x, H - 10);
+      });
+
+      const style = state.settings.gradeStyle;
+      const gradeData = prepareGradeData(
+        points,
+        state.settings.resampleDist,
+        state.settings.smoothWindow,
+        state.settings.gradeWindow
+      );
+
+      // 줌 구간에 해당하는 데이터만
+      const visibleGrade = gradeData.filter(p => p.dist >= viewMin - 0.01 && p.dist <= viewMax + 0.01);
+      const visiblePoints = points.filter(p => p.dist >= viewMin - 0.01 && p.dist <= viewMax + 0.01);
+
+      const toX = (dist) => pad.left + ((dist - viewMin) / viewSpan) * cW;
+      const toY = (ele) => pad.top + cH - ((ele - yMin) / (yMax - yMin)) * cH;
+
+      // Area — 픽셀 열 단위로 채워 세그먼트 경계 AA/알파 중첩 세로선 제거
+      if (style === 'area' || style === 'both') {
+        const src = visibleGrade.length > 1 ? visibleGrade : null;
+        if (src && src.length > 1) {
+          const yBase = pad.top + cH;
+          const xL = Math.floor(pad.left);
+          const xR = Math.ceil(pad.left + cW);
+          let j = 0;
+          for (let x = xL; x < xR; x++) {
+            const dist = viewMin + ((x - pad.left + 0.5) / cW) * viewSpan;
+            while (j < src.length - 2 && src[j + 1].dist < dist) j++;
+            const a = src[j];
+            const b = src[Math.min(j + 1, src.length - 1)];
+            const span = (b.dist - a.dist) || 1e-9;
+            const u = Math.max(0, Math.min(1, (dist - a.dist) / span));
+            const ele = a.ele + (b.ele - a.ele) * u;
+            const grade = b.grade; // 구간 경사
+            const y = toY(ele);
+            const h = yBase - y;
+            if (h <= 0) continue;
+            ctx.fillStyle = gradeToColor(grade, state.settings.areaColorMode, true);
+            ctx.fillRect(x, y, 1, h);
+          }
+        }
+      } else if (visiblePoints.length > 1) {
+        ctx.beginPath();
+        visiblePoints.forEach((p, i) => {
+          const x = toX(p.dist), y = toY(p.ele);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.lineTo(toX(visiblePoints[visiblePoints.length - 1].dist), pad.top + cH);
+        ctx.lineTo(toX(visiblePoints[0].dist), pad.top + cH);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(74, 158, 255, 0.2)';
+        ctx.fill();
+      }
+
+      // Line
+      if (style === 'line' || style === 'both') {
+        if (visibleGrade.length > 1) {
+          for (let i = 1; i < visibleGrade.length; i++) {
+            const g0 = visibleGrade[i - 1], g1 = visibleGrade[i];
+            ctx.beginPath();
+            ctx.moveTo(toX(g0.dist), toY(g0.ele));
+            ctx.lineTo(toX(g1.dist), toY(g1.ele));
+            ctx.strokeStyle = gradeToColor(g1.grade, state.settings.areaColorMode, false);
+            ctx.lineWidth = 2.5;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+          }
+        }
+      } else if (visiblePoints.length > 1) {
+        ctx.beginPath();
+        visiblePoints.forEach((p, i) => {
+          const x = toX(p.dist), y = toY(p.ele);
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = style === 'area' ? '#aaa' : '#4a9eff';
+        ctx.lineWidth = style === 'area' ? 1.5 : 2;
+        ctx.stroke();
+      }
+
+      // 구간 분할 경계선
+      drawSegmentBoundaries(ctx, pad, viewMin, viewMax, viewSpan, cW, cH);
+
+      state.chartHover = {
+        data: gradeData.length ? gradeData : points.map(p => ({ dist: p.dist, ele: p.ele, grade: 0 })),
+        totalDistance,
+        viewMin, viewMax, viewSpan,
+        pad, yMin, yMax, W, H, cW, cH
+      };
+    }
+
+    function drawMinimap(points, totalDistance) {
+      const canvas = $('#minimap-canvas');
+      const wrap = $('#minimap-wrap');
+      if (!canvas || !points.length) {
+        if (wrap) wrap.classList.add('hidden');
+        return;
+      }
+      wrap.classList.remove('hidden');
+
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const W = rect.width;
+      const H = 28;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      canvas.style.width = W + 'px';
+      canvas.style.height = H + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      // 메인 차트와 동일한 좌우 패딩으로 X축 정렬
+      const padL = (state.chartHover && state.chartHover.pad) ? state.chartHover.pad.left : 48;
+      const padR = (state.chartHover && state.chartHover.pad) ? state.chartHover.pad.right : 16;
+      const cW = Math.max(1, W - padL - padR);
+
+      let minE = Infinity, maxE = -Infinity;
+      points.forEach(p => {
+        if (p.ele < minE) minE = p.ele;
+        if (p.ele > maxE) maxE = p.ele;
+      });
+      if (maxE === minE) maxE = minE + 1;
+
+      const light = state.chartTheme === 'light';
+      ctx.fillStyle = light ? '#e8e8e8' : '#181818';
+      ctx.fillRect(0, 0, W, H);
+
+      const toX = (dist) => padL + (dist / totalDistance) * cW;
+
+      // 전체 프로필
+      ctx.beginPath();
+      points.forEach((p, i) => {
+        const x = toX(p.dist);
+        const y = H - 2 - ((p.ele - minE) / (maxE - minE)) * (H - 4);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = light ? '#999' : '#666';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      const zoom = getZoomRange(totalDistance);
+      const isFull = zoom.minDist <= 0.001 && zoom.maxDist >= totalDistance - 0.001;
+      const x0 = toX(zoom.minDist);
+      const x1 = toX(zoom.maxDist);
+      const handleW = 4;
+
+      if (!isFull) {
+        ctx.fillStyle = light ? 'rgba(80,80,80,0.18)' : 'rgba(180,180,180,0.2)';
+        ctx.fillRect(x0, 0, Math.max(x1 - x0, 2), H);
+        ctx.strokeStyle = light ? 'rgba(60,60,60,0.55)' : 'rgba(200,200,200,0.65)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0 + 0.5, 0.5, Math.max(x1 - x0, 2) - 1, H - 1);
+        ctx.fillStyle = light ? '#666' : '#bbb';
+        ctx.fillRect(x0, 0, handleW, H);
+        ctx.fillRect(x1 - handleW, 0, handleW, H);
+      }
+
+      state.minimapLayout = { W, H, totalDistance, x0, x1, handleW, isFull, padL, padR, cW };
+    }
+
+    function findNearestChartPoint(clientX, clientY) {
+      const hover = state.chartHover;
+      if (!hover || !hover.data.length) return null;
+      const canvas = $('#elevation-chart');
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+
+      const { pad, cW, cH, data, yMin, yMax, viewMin, viewSpan } = hover;
+      if (x < pad.left || x > pad.left + cW || y < pad.top || y > pad.top + cH) return null;
+
+      const distKm = viewMin + ((x - pad.left) / cW) * viewSpan;
+      let best = data[0], bestDiff = Math.abs(data[0].dist - distKm);
+      for (let i = 1; i < data.length; i++) {
+        const d = Math.abs(data[i].dist - distKm);
+        if (d < bestDiff) { bestDiff = d; best = data[i]; }
+      }
+
+      const px = pad.left + ((best.dist - viewMin) / viewSpan) * cW;
+      const py = pad.top + cH - ((best.ele - yMin) / (yMax - yMin)) * cH;
+      return { point: best, px, py, canvasW: hover.W, canvasH: hover.H };
+    }
+
+    function showChartTooltip(clientX, clientY) {
+      const tooltip = $('#chart-tooltip');
+      if (state.chartDrag) { tooltip.style.display = 'none'; hideHoverOnMap(); return; }
+      const hit = findNearestChartPoint(clientX, clientY);
+      if (!hit) {
+        tooltip.style.display = 'none';
+        hideHoverOnMap();
+        return;
+      }
+
+      const { point, px, py, canvasW, canvasH } = hit;
+      const gradeStr = (point.grade >= 0 ? '+' : '') + point.grade.toFixed(1) + '%';
+
+      tooltip.innerHTML = `
+        <div class="tt-row"><span class="tt-label">거리</span><span class="tt-val">${point.dist.toFixed(2)} km</span></div>
+        <div class="tt-row"><span class="tt-label">고도</span><span class="tt-val">${Math.round(point.ele)} m</span></div>
+        <div class="tt-row"><span class="tt-label">경사</span><span class="tt-val">${gradeStr}</span></div>
+      `;
+      tooltip.style.display = 'block';
+
+      let left = px + 10;
+      let top = py + 8;
+      const tw = tooltip.offsetWidth;
+      const th = tooltip.offsetHeight;
+
+      if (left + tw > canvasW - 4) left = px - tw - 10;
+      if (left < 4) left = 4;
+      if (top + th > canvasH - 4) top = py - th - 8;
+      if (top < 4) top = 4;
+
+      tooltip.style.left = left + 'px';
+      tooltip.style.top = top + 'px';
+
+      const geo = pointFromChartDist(point.dist);
+      if (geo) showHoverOnMap(geo);
+    }
+
+    function hideChartTooltip() {
+      const tooltip = $('#chart-tooltip');
+      if (tooltip) tooltip.style.display = 'none';
+      hideHoverOnMap();
+    }
+
+    function clientXToDistMain(clientX) {
+      const hover = state.chartHover;
+      if (!hover) return null;
+      const canvas = $('#elevation-chart');
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const { pad, cW, viewMin, viewSpan } = hover;
+      const ratio = Math.max(0, Math.min(1, (x - pad.left) / cW));
+      return viewMin + ratio * viewSpan;
+    }
+
+    async function renderHistoryList() {
+      const listEl = $('#history-list');
+      const history = await getGpxHistory(30);
+      if (!history.length) {
+        listEl.innerHTML = '<p class="empty-message">저장된 GPX 기록이 없습니다.</p>';
+        return;
+      }
+      listEl.innerHTML = history.map(item => `
+        <div class="history-item" data-id="${item.id}">
+          <div class="info">
+            <div class="name">${escapeHtml(item.name)}</div>
+            <div class="meta">
+              ${item.distance ? item.distance.toFixed(1) + 'km' : ''}
+              ${item.elevationGain ? ' · +' + Math.round(item.elevationGain) + 'm' : ''}
+              · ${formatDate(item.loadedAt)}
+            </div>
+          </div>
+          <button class="delete-btn" data-id="${item.id}" title="삭제">🗑</button>
+        </div>
+      `).join('');
+
+      listEl.querySelectorAll('.history-item').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          if (e.target.classList.contains('delete-btn')) return;
+          const record = await getGpxById(Number(el.dataset.id));
+          if (record) {
+            await loadGpxContent(record.content, record.name, false);
+            closeModal('history-modal');
+          }
+        });
+      });
+      listEl.querySelectorAll('.delete-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm('이 GPX 기록을 삭제할까요?')) {
+            await deleteGpxFromHistory(Number(btn.dataset.id));
+            renderHistoryList();
+          }
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function formatDate(ts) {
+      const d = new Date(ts);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    }
+
+    function openModal(id) { $(`#${id}`).classList.remove('hidden'); }
+    function closeModal(id) { $(`#${id}`).classList.add('hidden'); }
+
+
+    function openAreaCompare() {
+      if (!state.currentGpx) {
+        alert('먼저 GPX를 불러와 주세요.');
+        return;
+      }
+      const paramsEl = $('#compare-params');
+      if (paramsEl) {
+        paramsEl.textContent = `(데드존 ${state.settings.gradeDeadzone}% · k=${state.settings.gradeK})`;
+      }
+      const grid = $('#compare-grid');
+      grid.innerHTML = '';
+      AREA_COLOR_MODES.forEach(mode => {
+        const card = document.createElement('div');
+        card.className = 'compare-card';
+        card.innerHTML = `
+          <h3>${mode.title}</h3>
+          <p>${mode.desc}</p>
+          <canvas data-mode="${mode.id}"></canvas>
+          <button type="button" class="apply-btn" data-mode="${mode.id}">이 방식 적용</button>
+        `;
+        grid.appendChild(card);
+      });
+      $('#compare-overlay').classList.remove('hidden');
+
+      // 다음 프레임에 그려야 canvas 크기가 잡힘
+      requestAnimationFrame(() => {
+        grid.querySelectorAll('canvas').forEach(cv => {
+          drawComparePreview(cv, cv.dataset.mode);
+        });
+      });
+
+      grid.querySelectorAll('.apply-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const mode = btn.dataset.mode;
+          state.settings.areaColorMode = mode;
+          $('#area-color-mode').value = mode;
+          await saveSetting('areaColorMode', mode);
+          // 영역이 보이게 gradeStyle 보정
+          if (state.settings.gradeStyle === 'none' || state.settings.gradeStyle === 'line') {
+            state.settings.gradeStyle = 'both';
+            $('#grade-style').value = 'both';
+            await saveSetting('gradeStyle', 'both');
+          }
+          closeAreaCompare();
+          redrawCharts();
+        });
+      });
+    }
+
+    function closeAreaCompare() {
+      $('#compare-overlay').classList.add('hidden');
+    }
+
+    function drawComparePreview(canvas, mode) {
+      const gpx = state.currentGpx;
+      if (!gpx) return;
+      const points = gpx.points;
+      const totalDistance = gpx.totalDistance;
+      const gradeData = prepareGradeData(
+        points,
+        state.settings.resampleDist,
+        state.settings.smoothWindow,
+        state.settings.gradeWindow
+      );
+
+      const dpr = window.devicePixelRatio || 1;
+      const W = canvas.clientWidth || 400;
+      const H = canvas.clientHeight || 140;
+      canvas.width = W * dpr;
+      canvas.height = H * dpr;
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const pad = { top: 8, right: 8, bottom: 8, left: 8 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+
+      let minE = 0, maxE = -Infinity;
+      points.forEach(p => {
+        if (p.ele < minE) minE = p.ele;
+        if (p.ele > maxE) maxE = p.ele;
+      });
+      if (maxE < 50) maxE = 50;
+      maxE *= 1.02;
+
+      ctx.fillStyle = '#1e1e1e';
+      ctx.fillRect(0, 0, W, H);
+
+      const toX = (dist) => pad.left + (dist / totalDistance) * cW;
+      const toY = (ele) => pad.top + cH - ((ele - minE) / (maxE - minE)) * cH;
+
+      if (gradeData.length > 1) {
+        const yBase = pad.top + cH;
+        const xL = Math.floor(pad.left);
+        const xR = Math.ceil(pad.left + cW);
+        let j = 0;
+        for (let x = xL; x < xR; x++) {
+          const dist = ((x - pad.left + 0.5) / cW) * totalDistance;
+          while (j < gradeData.length - 2 && gradeData[j + 1].dist < dist) j++;
+          const a = gradeData[j];
+          const b = gradeData[Math.min(j + 1, gradeData.length - 1)];
+          const span = (b.dist - a.dist) || 1e-9;
+          const u = Math.max(0, Math.min(1, (dist - a.dist) / span));
+          const ele = a.ele + (b.ele - a.ele) * u;
+          const y = toY(ele);
+          const h = yBase - y;
+          if (h > 0) {
+            ctx.fillStyle = gradeToColor(b.grade, mode, true);
+            ctx.fillRect(x, y, 1, h);
+          }
+        }
+        for (let i = 1; i < gradeData.length; i++) {
+          const g0 = gradeData[i - 1], g1 = gradeData[i];
+          ctx.beginPath();
+          ctx.moveTo(toX(g0.dist), toY(g0.ele));
+          ctx.lineTo(toX(g1.dist), toY(g1.ele));
+          ctx.strokeStyle = gradeToColor(g1.grade, mode, false);
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+
+    function bindMapRouteInteraction() {
+      if (!state.map || state._mapRouteBound) return;
+      state._mapRouteBound = true;
+      const HIT_PX = 18;
+      let lastClient = { x: 0, y: 0 };
+
+      const mapDiv = $('#map');
+      if (mapDiv) {
+        mapDiv.addEventListener('mousemove', function(e) {
+          lastClient.x = e.clientX;
+          lastClient.y = e.clientY;
+        }, true);
+        mapDiv.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+        });
+      }
+
+      // 타일 위에서도 동작하도록 카카오 지도 이벤트 사용
+      kakao.maps.event.addListener(state.map, 'mousemove', function(mouseEvent) {
+        if (!state.currentGpx) return;
+        const ll = mouseEvent.latLng;
+        if (!ll) return;
+        const hit = findNearestRoutePointFromLatLng(ll.getLat(), ll.getLng(), HIT_PX);
+        if (hit) {
+          state.mapRouteHoverActive = true;
+          showHoverOnMap(hit.point);
+          showChartTooltipForDist(hit.point.dist);
+        } else if (state.mapRouteHoverActive) {
+          state.mapRouteHoverActive = false;
+          hideHoverOnMap();
+          hideChartTooltip();
+        }
+      });
+
+      kakao.maps.event.addListener(state.map, 'mouseout', function() {
+        if (state.mapRouteHoverActive) {
+          state.mapRouteHoverActive = false;
+          hideHoverOnMap();
+          hideChartTooltip();
+        }
+      });
+
+      kakao.maps.event.addListener(state.map, 'rightclick', function(mouseEvent) {
+        const ll = mouseEvent.latLng;
+        if (!state.currentGpx || !ll) return;
+        const hit = findNearestRoutePointFromLatLng(ll.getLat(), ll.getLng(), HIT_PX);
+        if (!hit) return;
+        showChartContextMenu(lastClient.x || 0, lastClient.y || 0, hit.point.dist);
+      });
+    }
+
+
+    /* ========== 라이딩 감지 모드 ========== */
+    const rideState = {
+      active: false,
+      lastFix: null,
+      lastStatus: '',
+      intervalId: null,
+      intervalSec: 60,
+      refreshing: false
+    };
+
+    function elevGainBetween(fromIdx, toIdx) {
+      const points = state.currentGpx && state.currentGpx.points;
+      if (!points || fromIdx == null || toIdx == null) return 0;
+      let g = 0;
+      const a = Math.max(0, fromIdx);
+      const b = Math.min(points.length - 1, toIdx);
+      for (let i = a + 1; i <= b; i++) {
+        const d = (points[i].ele || 0) - (points[i - 1].ele || 0);
+        if (d > 0) g += d;
+      }
+      return g;
+    }
+
+    /** GPS 좌표 → 트랙상 최근접 포인트 (거리 km 단위 haversine) */
+    function findNearestRoutePointByGeo(lat, lon) {
+      const points = state.currentGpx && state.currentGpx.points;
+      if (!points || !points.length) return null;
+      let bestI = 0, bestD = Infinity;
+      for (let i = 0; i < points.length; i++) {
+        const d = haversine(lat, lon, points[i].lat, points[i].lon);
+        if (d < bestD) {
+          bestD = d;
+          bestI = i;
+        }
+      }
+      return {
+        index: bestI,
+        point: points[bestI],
+        offRouteKm: bestD
+      };
+    }
+
+    function findSegmentAtDist(distKm) {
+      const segs = state.segments || [];
+      if (!segs.length) return null;
+      for (let i = 0; i < segs.length; i++) {
+        const s = segs[i];
+        if (distKm >= s.startDist && distKm <= s.endDist + 1e-6) return { seg: s, index: i };
+      }
+      if (distKm < segs[0].startDist) return { seg: segs[0], index: 0 };
+      return { seg: segs[segs.length - 1], index: segs.length - 1 };
+    }
+
+    function formatDurShort(sec) {
+      if (sec == null || isNaN(sec)) return '—';
+      sec = Math.max(0, Math.round(sec));
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      if (m >= 60) {
+        const h = Math.floor(m / 60);
+        return h + ':' + String(m % 60).padStart(2, '0');
+      }
+      return m + ':' + String(s).padStart(2, '0');
+    }
+
+    /** 구간 끝 목표 도착 시각 (플랜 출발 + 누적 목표시간) */
+    function plannedArrivalClockAtSegmentEnd(segIndex) {
+      let cumMin = 0;
+      for (let i = 0; i <= segIndex; i++) {
+        const s = state.segments[i];
+        if (s && s.targetDurationSec != null) cumMin += s.targetDurationSec / 60;
+        if (s && s.restAfterSec) cumMin += s.restAfterSec / 60;
+      }
+      return formatClockFromMinutes(cumMin);
+    }
+
+    function setRideStatus(msg, kind) {
+      const el = $('#rm-status');
+      if (!el) return;
+      el.textContent = msg;
+      el.className = 'rm-status' + (kind ? ' ' + kind : '');
+    }
+
+    function drawRideElevCanvas(seg, atIdx) {
+      const canvas = $('#rm-elev-canvas');
+      if (!canvas || !state.currentGpx || !seg) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      ctx.clearRect(0, 0, W, H);
+      const points = state.currentGpx.points;
+      const i0 = seg.startIdx, i1 = seg.endIdx;
+      if (i1 <= i0) return;
+      let minE = Infinity, maxE = -Infinity;
+      for (let i = i0; i <= i1; i++) {
+        const e = points[i].ele || 0;
+        if (e < minE) minE = e;
+        if (e > maxE) maxE = e;
+      }
+      if (maxE - minE < 1) { maxE = minE + 1; }
+      const d0 = points[i0].dist, d1 = points[i1].dist;
+      const span = Math.max(0.001, d1 - d0);
+      ctx.beginPath();
+      for (let i = i0; i <= i1; i++) {
+        const x = ((points[i].dist - d0) / span) * (W - 4) + 2;
+        const y = H - 4 - ((points[i].ele || 0) - minE) / (maxE - minE) * (H - 8);
+        if (i === i0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#4a9eff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // fill
+      ctx.lineTo(W - 2, H);
+      ctx.lineTo(2, H);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(74,158,255,0.15)';
+      ctx.fill();
+      // cursor
+      if (atIdx != null && atIdx >= i0 && atIdx <= i1) {
+        const x = ((points[atIdx].dist - d0) / span) * (W - 4) + 2;
+        const y = H - 4 - ((points[atIdx].ele || 0) - minE) / (maxE - minE) * (H - 8);
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    function applyRideFix(lat, lon, accuracyM) {
+      const near = findNearestRoutePointByGeo(lat, lon);
+      if (!near) {
+        setRideStatus('트랙 없음', 'err');
+        return;
+      }
+      const pt = near.point;
+      const total = state.currentGpx.totalDistance;
+      const remDist = Math.max(0, total - pt.dist);
+      const remGain = elevGainBetween(near.index, state.currentGpx.points.length - 1);
+      const coursePct = total > 0 ? Math.min(100, (pt.dist / total) * 100) : 0;
+
+      const setVal = (id, text) => {
+        const el = $(id);
+        if (!el) return;
+        // keep <small> if present
+        const small = el.querySelector('small');
+        const unit = small ? small.outerHTML : '';
+        el.innerHTML = text + unit;
+      };
+      setVal('#rm-dist', pt.dist.toFixed(1));
+      setVal('#rm-ele', String(Math.round(pt.ele || 0)));
+      setVal('#rm-rem-gain', String(Math.round(remGain)));
+      setVal('#rm-rem-dist', remDist.toFixed(1));
+      const prog = $('#rm-course-prog');
+      if (prog) prog.style.width = coursePct.toFixed(1) + '%';
+
+      const hit = findSegmentAtDist(pt.dist);
+      const seg = hit && hit.seg;
+      const nodes = state.nodes || [];
+      let segLabel = '구간';
+      if (hit && nodes.length > hit.index + 1) {
+        const a = nodes[hit.index], b = nodes[hit.index + 1];
+        segLabel = (a && a.name ? a.name : '') + ' → ' + (b && b.name ? b.name : '');
+      }
+      const nameEl = $('#rm-seg-name');
+      if (nameEl) nameEl.textContent = segLabel;
+
+      if (seg) {
+        const span = Math.max(0.001, seg.endDist - seg.startDist);
+        const along = Math.min(1, Math.max(0, (pt.dist - seg.startDist) / span));
+        const segProg = $('#rm-seg-prog');
+        if (segProg) segProg.style.width = (along * 100).toFixed(1) + '%';
+        const posEl = $('#rm-seg-pos');
+        if (posEl) {
+          posEl.innerHTML = (pt.dist - seg.startDist).toFixed(1) + '<small>/' + span.toFixed(1) + ' km</small>';
+        }
+        const segGain = elevGainBetween(near.index, seg.endIdx);
+        setVal('#rm-seg-gain', String(Math.round(segGain)));
+
+        let remTime = '—';
+        if (seg.targetDurationSec != null) {
+          remTime = formatDurShort(seg.targetDurationSec * (1 - along));
+        }
+        const rt = $('#rm-seg-rem-time');
+        if (rt) rt.textContent = remTime;
+        const eta = $('#rm-seg-eta');
+        if (eta) eta.textContent = plannedArrivalClockAtSegmentEnd(hit.index);
+
+        const chips = [];
+        if (seg.targetPower != null) chips.push('<span class="rm-chip">목표 파워 <strong>' + seg.targetPower + ' W</strong></span>');
+        if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 파워 <strong>' + seg.limitPower + ' W</strong></span>');
+        if (seg.targetHr != null) chips.push('<span class="rm-chip hr">목표 심박 <strong>' + seg.targetHr + '</strong></span>');
+        if (seg.limitHr != null) chips.push('<span class="rm-chip hr">제한 심박 <strong>' + seg.limitHr + '</strong></span>');
+        if (seg.note) chips.push('<span class="rm-chip">' + escapeHtml(seg.note) + '</span>');
+        const tg = $('#rm-targets');
+        if (tg) tg.innerHTML = chips.join('') || '<span class="rm-chip">목표 미설정</span>';
+
+        drawRideElevCanvas(seg, near.index);
+      }
+
+      const off = $('#rm-off-route');
+      if (off) {
+        if (near.offRouteKm > 0.08) {
+          off.style.display = 'block';
+          off.textContent = '경로에서 약 ' + (near.offRouteKm * 1000).toFixed(0) + ' m 벗어남 (가장 가까운 트랙 기준)';
+        } else {
+          off.style.display = 'none';
+        }
+      }
+
+      const acc = accuracyM != null ? ' ±' + Math.round(accuracyM) + 'm' : '';
+      const t = new Date();
+      const ts = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
+      setRideStatus(ts + ' 갱신' + acc, near.offRouteKm > 0.08 ? 'warn' : 'ok');
+      rideState.lastFix = { lat, lon, accuracyM, at: Date.now(), near };
+    }
+
+    function refreshRidePosition() {
+      if (!rideState.active || rideState.refreshing) return;
+      if (!navigator.geolocation) {
+        setRideStatus('GPS 미지원', 'err');
+        return;
+      }
+      if (!state.currentGpx) {
+        setRideStatus('GPX 없음', 'err');
+        return;
+      }
+      rideState.refreshing = true;
+      setRideStatus('위치 확인 중…', 'warn');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          rideState.refreshing = false;
+          applyRideFix(pos.coords.latitude, pos.coords.longitude, pos.coords.accuracy);
+        },
+        (err) => {
+          rideState.refreshing = false;
+          setRideStatus('GPS 실패: ' + (err.message || err.code), 'err');
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+      );
+    }
+
+    function clearRideInterval() {
+      if (rideState.intervalId) {
+        clearInterval(rideState.intervalId);
+        rideState.intervalId = null;
+      }
+    }
+
+    function setupRideInterval() {
+      clearRideInterval();
+      const sel = $('#rm-interval');
+      const sec = sel ? Number(sel.value) : 60;
+      rideState.intervalSec = isNaN(sec) ? 0 : sec;
+      if (rideState.intervalSec > 0 && rideState.active) {
+        rideState.intervalId = setInterval(() => {
+          if (document.visibilityState === 'visible') refreshRidePosition();
+        }, rideState.intervalSec * 1000);
+      }
+    }
+
+    function openRideMode() {
+      if (!state.currentGpx || !state.segments.length) {
+        alert('GPX와 큐시트가 필요합니다.');
+        return;
+      }
+      rideState.active = true;
+      const el = $('#ride-mode');
+      if (el) {
+        el.classList.add('open');
+        el.setAttribute('aria-hidden', 'false');
+      }
+      setupRideInterval();
+      refreshRidePosition();
+    }
+
+    function closeRideMode() {
+      rideState.active = false;
+      clearRideInterval();
+      const el = $('#ride-mode');
+      if (el) {
+        el.classList.remove('open');
+        el.setAttribute('aria-hidden', 'true');
+      }
+    }
+
+    function onRideVisibility() {
+      if (!rideState.active) return;
+      if (document.visibilityState === 'visible') {
+        refreshRidePosition();
+      }
+    }
+
+
+    function bindEvents() {
+      $('#btn-settings').addEventListener('click', () => openModal('settings-modal'));
+      $('#btn-history').addEventListener('click', () => { openModal('history-modal'); renderHistoryList(); });
+      $('#btn-waypoints').addEventListener('click', toggleWaypointPanel);
+      $('#btn-close-wp').addEventListener('click', closeWaypointPanel);
+      $('#btn-segments').addEventListener('click', toggleSegmentPanel);
+      $('#btn-close-seg').addEventListener('click', closeSegmentPanel);
+      $('#btn-add-node')?.addEventListener('click', promptAddNode);
+      $('#btn-ride-mode')?.addEventListener('click', openRideMode);
+      $('#rm-btn-exit')?.addEventListener('click', closeRideMode);
+      $('#rm-btn-refresh')?.addEventListener('click', refreshRidePosition);
+      $('#rm-interval')?.addEventListener('change', setupRideInterval);
+      document.addEventListener('visibilitychange', onRideVisibility);
+      window.addEventListener('focus', () => { if (rideState.active) refreshRidePosition(); });
+      $('#btn-confirm-add-node')?.addEventListener('click', confirmAddNodeFromModal);
+      $('#add-node-dist')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); confirmAddNodeFromModal(); }
+      });
+      $('#add-node-name')?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); $('#add-node-dist')?.focus(); }
+      });
+      $('#seg-expand-btn')?.addEventListener('click', toggleCuesheet);
+      $('#btn-export-gpx')?.addEventListener('click', exportGpxWithPlan);
+      $('#cs-start-time')?.addEventListener('change', (e) => {
+        state.planStartTime = e.target.value || '06:00';
+        renderCuesheet();
+        schedulePlanSave(true);
+      });
+      $('#btn-close-roadview').addEventListener('click', closeRoadview);
+      $('#roadview-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'roadview-overlay') closeRoadview();
+      });
+      // 차트 컨텍스트 메뉴
+      const ctxMenu = $('#chart-ctx-menu');
+      if (ctxMenu) {
+        ctxMenu.querySelectorAll('button[data-action]').forEach(btn => {
+          btn.addEventListener('click', () => handleChartContextAction(btn.dataset.action));
+        });
+      }
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#chart-ctx-menu')) hideChartContextMenu();
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          hideChartContextMenu();
+          closeRoadview();
+        }
+      });
+      $('#btn-compare-area').addEventListener('click', openAreaCompare);
+      $('#btn-chart-theme').addEventListener('click', () => {
+        state.chartTheme = state.chartTheme === 'dark' ? 'light' : 'dark';
+        const box = $('#chart-container');
+        if (state.chartTheme === 'light') box.classList.add('theme-light');
+        else box.classList.remove('theme-light');
+        if (state.currentGpx) redrawCharts();
+      });
+      $('#btn-close-compare').addEventListener('click', closeAreaCompare);
+      $('#compare-overlay').addEventListener('click', (e) => {
+        if (e.target.id === 'compare-overlay') closeAreaCompare();
+      });
+      $$('.modal-close').forEach(btn => btn.addEventListener('click', () => closeModal(btn.dataset.modal)));
+      $('#btn-save-settings').addEventListener('click', saveSettings);
+      $('#btn-upload-gpx').addEventListener('click', () => $('#gpx-file-input').click());
+      $('#gpx-file-input').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) { handleGpxFile(file); e.target.value = ''; }
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') $$('.modal:not(.hidden)').forEach(m => m.classList.add('hidden'));
+      });
+      window.addEventListener('resize', () => {
+        if (state.currentGpx) redrawCharts();
+      });
+
+      // --- 메인 차트: 툴팁 + 드래그 줌 + 더블클릭 리셋 ---
+      const chartCanvas = $('#elevation-chart');
+      const selectionEl = $('#chart-selection');
+
+      chartCanvas.addEventListener('mousemove', (e) => {
+        if (state.chartDrag) {
+          hideChartTooltip();
+          const startX = state.chartDrag.startClientX;
+          const wrap = $('#chart-main-wrap');
+          const rect = wrap.getBoundingClientRect();
+          const x0 = Math.min(startX, e.clientX) - rect.left;
+          const x1 = Math.max(startX, e.clientX) - rect.left;
+          selectionEl.style.display = 'block';
+          selectionEl.style.left = Math.max(0, x0) + 'px';
+          selectionEl.style.width = Math.max(0, x1 - x0) + 'px';
+          return;
+        }
+        if (!state.chartHover) return;
+        showChartTooltip(e.clientX, e.clientY);
+      });
+
+      chartCanvas.addEventListener('mouseleave', () => {
+        if (!state.chartDrag) hideChartTooltip();
+      });
+
+      chartCanvas.addEventListener('click', (e) => {
+        if (state.chartDrag) return;
+        const hit = findNearestChartPoint(e.clientX, e.clientY);
+        if (!hit) return;
+        const geo = pointFromChartDist(hit.point.dist);
+        if (geo) centerMapOnPoint(geo);
+      });
+
+      chartCanvas.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || !state.chartHover) return;
+        if (state.minimapDrag) return;
+        e.preventDefault();
+        const dist = clientXToDistMain(e.clientX);
+        if (dist == null) return;
+        state.chartDrag = { startClientX: e.clientX, startDist: dist };
+        hideChartTooltip();
+        selectionEl.style.display = 'block';
+        selectionEl.style.left = '0px';
+        selectionEl.style.width = '0px';
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (state.chartDrag) {
+          const endDist = clientXToDistMain(e.clientX);
+          const startDist = state.chartDrag.startDist;
+          state.chartDrag = null;
+          selectionEl.style.display = 'none';
+          if (endDist != null && Math.abs(endDist - startDist) >= 0.05) {
+            setZoomRange(startDist, endDist, true);
+          }
+        }
+        if (state.minimapDrag) {
+          state.minimapDrag = null;
+          updateRouteHighlight(true);
+        }
+      });
+
+      chartCanvas.addEventListener('dblclick', () => {
+        resetZoom();
+      });
+
+      // 우클릭 컨텍스트 메뉴 (구간 분할, 로드뷰 등)
+      chartCanvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (!state.currentGpx || !state.chartHover) return;
+        const dist = clientXToDistMain(e.clientX);
+        if (dist == null) return;
+        showChartContextMenu(e.clientX, e.clientY, dist);
+      });
+
+      // --- 미니맵: 블록 이동 / 양끝 리사이즈 ---
+      const minimap = $('#minimap-canvas');
+
+      function minimapClientToDist(clientX) {
+        const rect = minimap.getBoundingClientRect();
+        const layout = state.minimapLayout;
+        if (!layout) return null;
+        const padL = layout.padL || 0;
+        const cW = layout.cW || layout.W;
+        const x = clientX - rect.left;
+        const ratio = Math.max(0, Math.min(1, (x - padL) / cW));
+        return ratio * layout.totalDistance;
+      }
+
+      minimap.addEventListener('dragstart', (e) => e.preventDefault());
+      chartCanvas.addEventListener('dragstart', (e) => e.preventDefault());
+
+      minimap.addEventListener('mousedown', (e) => {
+        if (e.button !== 0 || !state.minimapLayout || !state.currentGpx) return;
+        e.preventDefault();
+        e.stopPropagation();
+        // 메인 차트 드래그 줌과 충돌 방지
+        state.chartDrag = null;
+        selectionEl.style.display = 'none';
+
+        const layout = state.minimapLayout;
+        const rect = minimap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const handle = Math.max(6, layout.handleW + 3);
+        const zoom = getZoomRange(layout.totalDistance);
+
+        let mode = 'move';
+        if (Math.abs(x - layout.x0) <= handle) mode = 'resize-left';
+        else if (Math.abs(x - layout.x1) <= handle) mode = 'resize-right';
+        else if (x < layout.x0 || x > layout.x1) {
+          const span = zoom.maxDist - zoom.minDist;
+          let mid = minimapClientToDist(e.clientX);
+          let a = mid - span / 2;
+          let b = mid + span / 2;
+          if (a < 0) { b -= a; a = 0; }
+          if (b > layout.totalDistance) { a -= (b - layout.totalDistance); b = layout.totalDistance; }
+          setZoomRange(Math.max(0, a), Math.min(layout.totalDistance, b));
+          return;
+        }
+
+        state.minimapDrag = {
+          mode,
+          startX: e.clientX,
+          origMin: zoom.minDist,
+          origMax: zoom.maxDist
+        };
+        minimap.style.cursor = mode === 'move' ? 'grabbing' : 'ew-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!state.minimapDrag || !state.minimapLayout) return;
+        e.preventDefault();
+        const layout = state.minimapLayout;
+        const dx = e.clientX - state.minimapDrag.startX;
+        const dDist = (dx / (layout.cW || layout.W)) * layout.totalDistance;
+        const { mode, origMin, origMax } = state.minimapDrag;
+        const span = origMax - origMin;
+
+        if (mode === 'move') {
+          let a = origMin + dDist;
+          let b = origMax + dDist;
+          if (a < 0) { b -= a; a = 0; }
+          if (b > layout.totalDistance) { a -= (b - layout.totalDistance); b = layout.totalDistance; }
+          state.chartZoom = { minDist: a, maxDist: b };
+          redrawCharts();
+          updateRouteHighlight(false);
+        } else if (mode === 'resize-left') {
+          let a = Math.min(origMin + dDist, origMax - 0.05);
+          a = Math.max(0, a);
+          state.chartZoom = { minDist: a, maxDist: origMax };
+          redrawCharts();
+          updateRouteHighlight(false);
+        } else if (mode === 'resize-right') {
+          let b = Math.max(origMax + dDist, origMin + 0.05);
+          b = Math.min(layout.totalDistance, b);
+          state.chartZoom = { minDist: origMin, maxDist: b };
+          redrawCharts();
+          updateRouteHighlight(false);
+        }
+      });
+
+      minimap.addEventListener('mousemove', (e) => {
+        if (!state.minimapLayout) return;
+        const layout = state.minimapLayout;
+        const rect = minimap.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const handle = layout.handleW + 2;
+        if (Math.abs(x - layout.x0) <= handle || Math.abs(x - layout.x1) <= handle) {
+          minimap.style.cursor = 'ew-resize';
+        } else if (x >= layout.x0 && x <= layout.x1) {
+          minimap.style.cursor = 'grab';
+        } else {
+          minimap.style.cursor = 'pointer';
+        }
+      });
+    }
+
+    window.addEventListener('pagehide', flushPlanSaveSync);
+    window.addEventListener('beforeunload', flushPlanSaveSync);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushPlanSaveSync();
+    });
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
 </body>
 </html>
