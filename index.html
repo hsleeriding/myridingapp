@@ -722,61 +722,64 @@
       display: none;
     }
     #ride-mode .rm-stats-pane {
-      flex: 0 0 38%;
-      max-width: 180px;
-      min-width: 120px;
+      flex: 0 0 108px;
+      width: 108px;
+      min-width: 108px;
+      max-width: 108px;
       min-height: 0;
-      overflow-x: hidden;
-      overflow-y: auto;
-      padding: 8px 10px;
+      overflow: hidden;
+      padding: 6px 6px 4px;
       background: #121212;
       border-left: 1px solid #2a2a2a;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
-    #ride-mode .rm-stat { margin-bottom: 10px; }
-    #ride-mode .rm-stat label {
-      display: block;
-      font-size: 10px;
-      color: #777;
-      margin-bottom: 1px;
+    #ride-mode .rm-stat {
+      margin: 0;
+      flex: 0 0 auto;
+      line-height: 1.1;
     }
     #ride-mode .rm-stat .val {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       color: #f2f2f2;
-      line-height: 1.15;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    #ride-mode .rm-stat .val small {
-      font-size: 11px;
+    #ride-mode .rm-stat .val .u {
+      font-size: 10px;
       font-weight: 500;
-      color: #888;
+      color: #777;
+      margin-left: 1px;
+    }
+    #ride-mode .rm-stat .sym {
+      font-size: 9px;
+      color: #666;
+      margin-right: 2px;
     }
     #ride-mode .rm-ref {
-      margin-top: 6px;
-      padding-top: 8px;
+      margin-top: auto;
+      padding-top: 4px;
       border-top: 1px solid #2a2a2a;
-    }
-    #ride-mode .rm-ref h4 {
-      font-size: 10px;
-      color: #8ab4f8;
-      margin-bottom: 6px;
+      overflow: hidden;
+      flex: 0 1 auto;
+      min-height: 0;
     }
     #ride-mode .rm-chip {
       display: block;
-      background: #1e1e1e;
-      border: 1px solid #333;
-      border-radius: 6px;
-      padding: 5px 8px;
+      background: transparent;
+      border: none;
+      padding: 1px 0;
       font-size: 11px;
-      margin-bottom: 5px;
+      color: #ccc;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    #ride-mode .rm-chip strong { color: #4a9eff; }
+    #ride-mode .rm-chip strong { color: #4a9eff; font-weight: 700; }
     #ride-mode .rm-chip.warn strong { color: #fbbf24; }
     #ride-mode .rm-chip.hr strong { color: #f472b6; }
 
@@ -957,15 +960,12 @@
           <button type="button" class="rm-refresh-fab" id="rm-btn-start-track" title="감지 시작/중지">▶</button>
         </div>
         <div class="rm-stats-pane">
-          <div class="rm-stat"><label>남은 거리</label><div class="val" id="rm-rem-dist">—<small>km</small></div></div>
-          <div class="rm-stat"><label>남은 획고</label><div class="val" id="rm-seg-gain">—<small>m</small></div></div>
-          <div class="rm-stat"><label>남은 목표시간</label><div class="val" id="rm-seg-rem-time">—</div></div>
-          <div class="rm-stat"><label>남은 순경사</label><div class="val" id="rm-grade">—<small>%</small></div></div>
-          <div class="rm-stat"><label>목표 도착</label><div class="val" id="rm-seg-eta">—</div></div>
-          <div class="rm-ref">
-            <h4>참고</h4>
-            <div id="rm-targets"></div>
-          </div>
+          <div class="rm-stat" title="남은 거리"><span class="sym">↔</span><span class="val" id="rm-rem-dist">—<span class="u">km</span></span></div>
+          <div class="rm-stat" title="남은 획고"><span class="sym">↗</span><span class="val" id="rm-seg-gain">—<span class="u">m</span></span></div>
+          <div class="rm-stat" title="남은 목표시간"><span class="sym">⏱</span><span class="val" id="rm-seg-rem-time">—</span></div>
+          <div class="rm-stat" title="남은 순경사"><span class="sym">%</span><span class="val" id="rm-grade">—</span></div>
+          <div class="rm-stat" title="목표 도착"><span class="sym">🏁</span><span class="val" id="rm-seg-eta">—</span></div>
+          <div class="rm-ref"><div id="rm-targets"></div></div>
         </div>
       </div>
       <div class="rm-charts">
@@ -992,16 +992,18 @@
           <div id="rm-map-course" style="width:100%;height:100%;"></div>
         </div>
         <div class="rm-stats-pane">
-          <div class="rm-stat"><label>진행 거리</label><div class="val" id="rm-dist">—<small>km</small></div></div>
-          <div class="rm-stat"><label>현재 고도</label><div class="val" id="rm-ele">—<small>m</small></div></div>
-          <div class="rm-stat"><label>남은 거리</label><div class="val" id="rm-course-rem-dist">—<small>km</small></div></div>
-          <div class="rm-stat"><label>남은 획고</label><div class="val" id="rm-rem-gain">—<small>m</small></div></div>
-          <div class="rm-stat"><label>코스 진행</label><div class="val" id="rm-course-pct">—<small>%</small></div></div>
+          <div class="rm-stat" title="진행 거리"><span class="sym">→</span><span class="val" id="rm-dist">—<span class="u">km</span></span></div>
+          <div class="rm-stat" title="현재 고도"><span class="sym">▲</span><span class="val" id="rm-ele">—<span class="u">m</span></span></div>
+          <div class="rm-stat" title="남은 거리"><span class="sym">↔</span><span class="val" id="rm-course-rem-dist">—<span class="u">km</span></span></div>
+          <div class="rm-stat" title="남은 획고"><span class="sym">↗</span><span class="val" id="rm-rem-gain">—<span class="u">m</span></span></div>
+          <div class="rm-stat" title="진행률"><span class="sym">%</span><span class="val" id="rm-course-pct">—</span></div>
         </div>
       </div>
       <div class="rm-charts">
-        <div class="rm-chart-label">전체 고도 (시안 — 구간 탭과 동일 미니맵 영역)</div>
-        <div id="rm-mini-wrap-course" style="height:80px;background:#141414;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#555;font-size:12px;">전체 고도 차트 영역</div>
+        <div class="rm-chart-label">전체 고도</div>
+        <div id="rm-elev-wrap-course" style="flex:1;min-height:0;height:130px;">
+          <canvas id="rm-elev-canvas-course" width="800" height="130" style="width:100%;height:100%;display:block;background:#1e1e1e;border-radius:4px;"></canvas>
+        </div>
       </div>
     </div>
 
@@ -3873,6 +3875,190 @@
       drawMinimap(points, totalDistance);
     }
 
+
+    /**
+     * 공통 경사 고도 프로파일 (분석/라이딩 공유)
+     * opts: { atDist, showMinMax, showEnds, pad, yMin, yMax, fillBg }
+     */
+    function drawGradeProfileOnCanvas(canvas, points, viewMin, viewMax, opts) {
+      opts = opts || {};
+      if (!canvas || !points || points.length < 2) return null;
+      const wrap = opts.wrapEl || canvas.parentElement;
+      const rect = (wrap && wrap.getBoundingClientRect) ? wrap.getBoundingClientRect() : { width: canvas.clientWidth, height: canvas.clientHeight };
+      const dpr = window.devicePixelRatio || 1;
+      const Wcss = Math.max(80, rect.width || 200);
+      const Hcss = Math.max(40, rect.height || 100);
+      canvas.width = Wcss * dpr;
+      canvas.height = Hcss * dpr;
+      canvas.style.width = Wcss + 'px';
+      canvas.style.height = Hcss + 'px';
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const W = Wcss, H = Hcss;
+      const pad = opts.pad || { top: 10, right: 10, bottom: 18, left: 36 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+      if (cW < 10 || cH < 10) return null;
+
+      let minE = opts.yMin, maxE = opts.yMax;
+      if (minE == null || maxE == null) {
+        minE = Infinity; maxE = -Infinity;
+        for (let i = 0; i < points.length; i++) {
+          const d = points[i].dist;
+          if (d < viewMin - 0.02 || d > viewMax + 0.02) continue;
+          const e = points[i].ele || 0;
+          if (e < minE) minE = e;
+          if (e > maxE) maxE = e;
+        }
+        if (!isFinite(minE)) { minE = 0; maxE = 50; }
+        if (maxE < 50) maxE = 50;
+        maxE *= 1.05;
+      }
+      const viewSpan = Math.max(0.001, viewMax - viewMin);
+      const toX = (dist) => pad.left + ((dist - viewMin) / viewSpan) * cW;
+      const toY = (ele) => pad.top + cH - ((ele - minE) / (maxE - minE || 1)) * cH;
+
+      const bg = opts.fillBg != null ? opts.fillBg : '#1e1e1e';
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = opts.gridColor || '#333';
+      ctx.fillStyle = opts.labelColor || '#888';
+      ctx.font = '10px sans-serif';
+      ctx.lineWidth = 1;
+      const yTicks = opts.yTicks != null ? opts.yTicks : 3;
+      for (let s = 0; s <= yTicks; s++) {
+        const ele = minE + (maxE - minE) * (s / yTicks);
+        const y = toY(ele);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + cW, y);
+        ctx.stroke();
+        if (opts.showYLabels !== false) {
+          ctx.textAlign = 'right';
+          ctx.fillText(Math.round(ele) + 'm', pad.left - 4, y + 3);
+        }
+      }
+
+      const style = state.settings.gradeStyle || 'line';
+      const gradeData = prepareGradeData(
+        points,
+        state.settings.resampleDist,
+        state.settings.smoothWindow,
+        state.settings.gradeWindow
+      );
+      const visibleGrade = gradeData.filter(p => p.dist >= viewMin - 0.02 && p.dist <= viewMax + 0.02);
+      const visiblePoints = points.filter(p => p.dist >= viewMin - 0.02 && p.dist <= viewMax + 0.02);
+
+      if ((style === 'area' || style === 'both') && visibleGrade.length > 1) {
+        const yBase = pad.top + cH;
+        const xL = Math.floor(pad.left);
+        const xR = Math.ceil(pad.left + cW);
+        let j = 0;
+        const src = visibleGrade;
+        for (let x = xL; x < xR; x++) {
+          const dist = viewMin + ((x - pad.left + 0.5) / cW) * viewSpan;
+          while (j < src.length - 2 && src[j + 1].dist < dist) j++;
+          const a = src[j];
+          const b = src[Math.min(j + 1, src.length - 1)];
+          const span = (b.dist - a.dist) || 1e-9;
+          const u = Math.max(0, Math.min(1, (dist - a.dist) / span));
+          const ele = a.ele + (b.ele - a.ele) * u;
+          const grade = b.grade;
+          const y = toY(ele);
+          const h = yBase - y;
+          if (h <= 0) continue;
+          ctx.fillStyle = gradeToColor(grade, state.settings.areaColorMode, true);
+          ctx.fillRect(x, y, 1, h);
+        }
+      }
+
+      if (style === 'line' || style === 'both') {
+        if (visibleGrade.length >= 2) {
+          for (let i = 1; i < visibleGrade.length; i++) {
+            const a = visibleGrade[i - 1], b = visibleGrade[i];
+            ctx.strokeStyle = gradeToColor(b.grade != null ? b.grade : 0);
+            ctx.lineWidth = opts.lineWidth || 2.5;
+            ctx.beginPath();
+            ctx.moveTo(toX(a.dist), toY(a.ele));
+            ctx.lineTo(toX(b.dist), toY(b.ele));
+            ctx.stroke();
+          }
+        } else if (visiblePoints.length > 1) {
+          ctx.beginPath();
+          visiblePoints.forEach((p, i) => {
+            const x = toX(p.dist), y = toY(p.ele || 0);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = '#4a9eff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+
+      let minI = -1, maxI = -1, minEv = Infinity, maxEv = -Infinity;
+      for (let i = 0; i < points.length; i++) {
+        if (points[i].dist < viewMin || points[i].dist > viewMax) continue;
+        const e = points[i].ele || 0;
+        if (e < minEv) { minEv = e; minI = i; }
+        if (e > maxEv) { maxEv = e; maxI = i; }
+      }
+      if (opts.showMinMax && minI >= 0) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.fillStyle = '#999';
+        ctx.font = '9px sans-serif';
+        ctx.textAlign = 'left';
+        [[minI, '↓' + Math.round(points[minI].ele || 0)], [maxI, '↑' + Math.round(points[maxI].ele || 0)]].forEach(([idx, lab]) => {
+          if (idx < 0) return;
+          const x = toX(points[idx].dist);
+          ctx.beginPath();
+          ctx.moveTo(x, pad.top);
+          ctx.lineTo(x, pad.top + cH);
+          ctx.stroke();
+          ctx.fillText(lab, Math.min(x + 2, W - 36), toY(points[idx].ele || 0) - 2);
+        });
+      }
+
+      if (opts.showEnds) {
+        const i0 = points.findIndex(p => p.dist >= viewMin - 1e-6);
+        let i1 = points.length - 1;
+        for (let i = points.length - 1; i >= 0; i--) {
+          if (points[i].dist <= viewMax + 1e-6) { i1 = i; break; }
+        }
+        if (i0 >= 0) {
+          ctx.fillStyle = '#888';
+          ctx.font = '9px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.fillText(viewMin.toFixed(1) + 'km ' + Math.round(points[i0].ele || 0) + 'm', pad.left, H - 4);
+          ctx.textAlign = 'right';
+          ctx.fillText(viewMax.toFixed(1) + 'km ' + Math.round(points[i1].ele || 0) + 'm', pad.left + cW, H - 4);
+        }
+      }
+
+      if (opts.atDist != null && opts.atDist >= viewMin && opts.atDist <= viewMax) {
+        const x = toX(opts.atDist);
+        let ele = null;
+        for (let i = 0; i < points.length; i++) {
+          if (Math.abs(points[i].dist - opts.atDist) < 0.02) { ele = points[i].ele; break; }
+        }
+        if (ele == null) {
+          const p = findPointNearDist(points, opts.atDist);
+          ele = p ? p.ele : minE;
+        }
+        const y = toY(ele || 0);
+        ctx.strokeStyle = 'rgba(248,113,113,0.75)';
+        ctx.beginPath();
+        ctx.moveTo(x, pad.top);
+        ctx.lineTo(x, pad.top + cH);
+        ctx.stroke();
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      return { toX, toY, pad, cW, cH, W, H, minE, maxE, viewMin, viewMax };
+    }
+
     function drawElevationChart(points, totalDistance) {
       const canvas = $('#elevation-chart');
       const placeholder = $('#chart-placeholder');
@@ -4437,7 +4623,10 @@
       marker: null,
       boundsFittedSeg: null,
       tracking: false,
-      logs: []
+      logs: [],
+      courseMap: null,
+      coursePolyline: null,
+      courseMarker: null
     };
 
     function elevGainBetween(fromIdx, toIdx) {
@@ -4575,6 +4764,52 @@
 
 
     
+
+    function ensureRideCourseMap() {
+      if (!window.kakao || !kakao.maps) return null;
+      const el = $('#rm-map-course');
+      if (!el) return null;
+      if (rideState.courseMap) {
+        try { rideState.courseMap.relayout(); } catch (_) {}
+        return rideState.courseMap;
+      }
+      const center = state.currentGpx && state.currentGpx.points[0]
+        ? new kakao.maps.LatLng(state.currentGpx.points[0].lat, state.currentGpx.points[0].lon)
+        : new kakao.maps.LatLng(37.5665, 126.9780);
+      rideState.courseMap = new kakao.maps.Map(el, { center: center, level: 7 });
+      setTimeout(() => { try { rideState.courseMap.relayout(); } catch (_) {} }, 100);
+      return rideState.courseMap;
+    }
+
+    function updateRideCourseMap(atPoint) {
+      const map = ensureRideCourseMap();
+      if (!map || !state.currentGpx) return;
+      const points = state.currentGpx.points;
+      const path = points.map(p => new kakao.maps.LatLng(p.lat, p.lon));
+      if (!rideState.coursePolyline) {
+        rideState.coursePolyline = new kakao.maps.Polyline({
+          path: path,
+          strokeWeight: 4,
+          strokeColor: '#4a9eff',
+          strokeOpacity: 0.85,
+          map: map
+        });
+        const bounds = new kakao.maps.LatLngBounds();
+        path.forEach(p => bounds.extend(p));
+        map.setBounds(bounds, 24, 24, 24, 24);
+      } else {
+        rideState.coursePolyline.setPath(path);
+      }
+      if (atPoint) {
+        const pos = new kakao.maps.LatLng(atPoint.lat, atPoint.lon);
+        if (rideState.courseMarker) {
+          rideState.courseMarker.setPosition(pos);
+        } else {
+          rideState.courseMarker = new kakao.maps.Marker({ position: pos, map: map });
+        }
+      }
+    }
+
     function ensureRideMap() {
       if (!window.kakao || !kakao.maps) {
         setRideStatus('지도 API 없음', 'err');
@@ -4645,156 +4880,20 @@
       }
     }
 
-            function drawRideElevCanvas(seg, atIdx) {
+                function drawRideElevCanvas(seg, atIdx) {
       const canvas = $('#rm-elev-canvas');
       if (!canvas || !state.currentGpx || !seg) return;
-      const wrap = $('#rm-elev-wrap') || canvas.parentElement;
-      const rect = wrap.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      const Wcss = Math.max(100, rect.width);
-      const Hcss = Math.max(60, rect.height);
-      canvas.width = Wcss * dpr;
-      canvas.height = Hcss * dpr;
-      canvas.style.width = Wcss + 'px';
-      canvas.style.height = Hcss + 'px';
-      const ctx = canvas.getContext('2d');
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const W = Wcss, H = Hcss;
       const points = state.currentGpx.points;
-      const i0 = seg.startIdx, i1 = seg.endIdx;
-      if (i1 <= i0) return;
-
-      const pad = { top: 10, right: 10, bottom: 18, left: 36 };
-      const cW = W - pad.left - pad.right;
-      const cH = H - pad.top - pad.bottom;
-
-      let minE = Infinity, maxE = -Infinity, minI = i0, maxI = i0;
-      for (let i = i0; i <= i1; i++) {
-        const e = points[i].ele || 0;
-        if (e < minE) { minE = e; minI = i; }
-        if (e > maxE) { maxE = e; maxI = i; }
-      }
-      if (maxE < 50) maxE = 50;
-      maxE *= 1.05;
-      if (minE > 0) minE = Math.min(0, minE);
-
-      const d0 = points[i0].dist, d1 = points[i1].dist;
-      const viewMin = d0, viewMax = d1;
-      const viewSpan = Math.max(0.001, viewMax - viewMin);
-      const toX = (dist) => pad.left + ((dist - viewMin) / viewSpan) * cW;
-      const toY = (ele) => pad.top + cH - ((ele - minE) / (maxE - minE || 1)) * cH;
-
-      ctx.fillStyle = '#1e1e1e';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = '#333';
-      ctx.fillStyle = '#888';
-      ctx.font = '10px sans-serif';
-      ctx.lineWidth = 1;
-      for (let s = 0; s <= 3; s++) {
-        const ele = minE + (maxE - minE) * (s / 3);
-        const y = toY(ele);
-        ctx.beginPath();
-        ctx.moveTo(pad.left, y);
-        ctx.lineTo(pad.left + cW, y);
-        ctx.stroke();
-        ctx.textAlign = 'right';
-        ctx.fillText(Math.round(ele) + 'm', pad.left - 4, y + 3);
-      }
-
-      const style = state.settings.gradeStyle || 'line';
-      const segPoints = points.slice(i0, i1 + 1);
-      const gradeData = prepareGradeData(
-        segPoints,
-        state.settings.resampleDist,
-        state.settings.smoothWindow,
-        state.settings.gradeWindow
-      );
-
-      if (style === 'area' || style === 'both') {
-        if (gradeData.length > 1) {
-          const yBase = pad.top + cH;
-          const xL = Math.floor(pad.left);
-          const xR = Math.ceil(pad.left + cW);
-          let j = 0;
-          for (let x = xL; x < xR; x++) {
-            const dist = viewMin + ((x - pad.left + 0.5) / cW) * viewSpan;
-            while (j < gradeData.length - 2 && gradeData[j + 1].dist < dist) j++;
-            const a = gradeData[j];
-            const b = gradeData[Math.min(j + 1, gradeData.length - 1)];
-            const span = (b.dist - a.dist) || 1e-9;
-            const u = Math.max(0, Math.min(1, (dist - a.dist) / span));
-            const ele = a.ele + (b.ele - a.ele) * u;
-            const grade = b.grade;
-            const y = toY(ele);
-            const h = yBase - y;
-            if (h <= 0) continue;
-            ctx.fillStyle = gradeToColor(grade, state.settings.areaColorMode, true);
-            ctx.fillRect(x, y, 1, h);
-          }
-        }
-      }
-
-      if (style === 'line' || style === 'both' || style === 'area') {
-        // line on top for line/both; for area still optional outline
-        if (style === 'line' || style === 'both') {
-          if (gradeData.length >= 2) {
-            for (let i = 1; i < gradeData.length; i++) {
-              const a = gradeData[i - 1], b = gradeData[i];
-              ctx.strokeStyle = gradeToColor(b.grade != null ? b.grade : 0);
-              ctx.lineWidth = 2.5;
-              ctx.beginPath();
-              ctx.moveTo(toX(a.dist), toY(a.ele));
-              ctx.lineTo(toX(b.dist), toY(b.ele));
-              ctx.stroke();
-            }
-          } else if (segPoints.length > 1) {
-            ctx.beginPath();
-            segPoints.forEach((p, i) => {
-              const x = toX(p.dist), y = toY(p.ele || 0);
-              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.strokeStyle = '#4a9eff';
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          }
-        }
-      }
-
-      // min/max
-      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-      ctx.fillStyle = '#999';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'left';
-      [[minI, '↓' + Math.round(points[minI].ele || 0)], [maxI, '↑' + Math.round(points[maxI].ele || 0)]].forEach(([idx, lab]) => {
-        const x = toX(points[idx].dist);
-        ctx.beginPath();
-        ctx.moveTo(x, pad.top);
-        ctx.lineTo(x, pad.top + cH);
-        ctx.stroke();
-        ctx.fillText(lab, Math.min(x + 2, W - 36), toY(points[idx].ele || 0) - 2);
+      const atDist = (atIdx != null && points[atIdx]) ? points[atIdx].dist : null;
+      drawGradeProfileOnCanvas(canvas, points, seg.startDist, seg.endDist, {
+        wrapEl: $('#rm-elev-wrap'),
+        atDist: atDist,
+        showMinMax: true,
+        showEnds: true,
+        pad: { top: 10, right: 10, bottom: 18, left: 36 }
       });
-
-      ctx.fillStyle = '#888';
-      ctx.font = '9px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.fillText(d0.toFixed(1) + 'km ' + Math.round(points[i0].ele || 0) + 'm', pad.left, H - 4);
-      ctx.textAlign = 'right';
-      ctx.fillText(d1.toFixed(1) + 'km ' + Math.round(points[i1].ele || 0) + 'm', pad.left + cW, H - 4);
-
-      if (atIdx != null && atIdx >= i0 && atIdx <= i1) {
-        const x = toX(points[atIdx].dist);
-        const y = toY(points[atIdx].ele || 0);
-        ctx.strokeStyle = 'rgba(248,113,113,0.75)';
-        ctx.beginPath();
-        ctx.moveTo(x, pad.top);
-        ctx.lineTo(x, pad.top + cH);
-        ctx.stroke();
-        ctx.fillStyle = '#f87171';
-        ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
-        ctx.fill();
-      }
     }
+
 
 
 
@@ -4908,10 +5007,10 @@
       drawRideMinimap(seg.startDist, seg);
       updateRideMapForSeg(seg, state.currentGpx.points[seg.startIdx]);
       const chips = [];
-      if (seg.targetPower != null) chips.push('<span class="rm-chip">목표 파워 <strong>' + seg.targetPower + ' W</strong></span>');
-      if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 <strong>' + seg.limitPower + ' W</strong></span>');
-      if (seg.targetHr != null) chips.push('<span class="rm-chip hr">목표 심박 <strong>' + seg.targetHr + '</strong></span>');
-      if (seg.limitHr != null) chips.push('<span class="rm-chip hr">제한 <strong>' + seg.limitHr + '</strong></span>');
+      if (seg.targetPower != null) chips.push('<span class="rm-chip" title="목표 파워"><strong>' + seg.targetPower + '</strong>W</span>');
+      if (seg.limitPower != null) chips.push('<span class="rm-chip warn" title="제한 파워"><strong>' + seg.limitPower + '</strong>W↓</span>');
+      if (seg.targetHr != null) chips.push('<span class="rm-chip hr" title="목표 심박"><strong>' + seg.targetHr + '</strong>♥</span>');
+      if (seg.limitHr != null) chips.push('<span class="rm-chip hr" title="제한 심박"><strong>' + seg.limitHr + '</strong>♥↓</span>');
       if (seg.note) chips.push('<span class="rm-chip">' + escapeHtml(seg.note) + '</span>');
       const tg = $('#rm-targets');
       if (tg) tg.innerHTML = chips.join('') || '<span class="rm-chip">목표 미설정</span>';
@@ -4929,6 +5028,40 @@
       $$('#ride-mode .rm-panel').forEach(p => {
         p.classList.toggle('active', p.dataset.panel === tab);
       });
+      if (tab === 'course') {
+        requestAnimationFrame(() => {
+          const pt = rideState.lastFix && rideState.lastFix.near
+            ? rideState.lastFix.near.point
+            : (state.currentGpx && state.currentGpx.points[0]);
+          updateRideCourseMap(pt);
+          if (state.currentGpx) {
+            const total = state.currentGpx.totalDistance;
+            const at = pt ? pt.dist : null;
+            drawGradeProfileOnCanvas($('#rm-elev-canvas-course'), state.currentGpx.points, 0, total, {
+              wrapEl: $('#rm-elev-wrap-course'),
+              atDist: at,
+              showMinMax: true,
+              showEnds: true
+            });
+          }
+          setTimeout(() => {
+            if (rideState.courseMap) {
+              try { rideState.courseMap.relayout(); } catch (_) {}
+            }
+          }, 120);
+        });
+      } else if (tab === 'seg') {
+        requestAnimationFrame(() => {
+          if (rideState.map) {
+            try { rideState.map.relayout(); } catch (_) {}
+          }
+          const s = state.segments[getRideSegIndex()];
+          if (s) {
+            drawRideElevCanvas(s, null);
+            drawRideMinimap(s.startDist, s);
+          }
+        });
+      }
     }
 
 
@@ -4947,9 +5080,9 @@
       const setVal = (id, text) => {
         const el = $(id);
         if (!el) return;
-        const small = el.querySelector('small');
-        const unit = small ? small.outerHTML : '';
-        el.innerHTML = text + unit;
+        const unit = el.querySelector('.u, small');
+        const unitHtml = unit ? unit.outerHTML : '';
+        el.innerHTML = text + unitHtml;
       };
 
       // course panel stats
@@ -4996,10 +5129,10 @@
         setVal('#rm-grade', (grade >= 0 ? '+' : '') + grade.toFixed(1));
 
         const chips = [];
-        if (seg.targetPower != null) chips.push('<span class="rm-chip">목표 파워 <strong>' + seg.targetPower + ' W</strong></span>');
-        if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 <strong>' + seg.limitPower + ' W</strong></span>');
-        if (seg.targetHr != null) chips.push('<span class="rm-chip hr">목표 심박 <strong>' + seg.targetHr + '</strong></span>');
-        if (seg.limitHr != null) chips.push('<span class="rm-chip hr">제한 <strong>' + seg.limitHr + '</strong></span>');
+        if (seg.targetPower != null) chips.push('<span class="rm-chip" title="목표 파워"><strong>' + seg.targetPower + '</strong>W</span>');
+        if (seg.limitPower != null) chips.push('<span class="rm-chip warn" title="제한 파워"><strong>' + seg.limitPower + '</strong>W↓</span>');
+        if (seg.targetHr != null) chips.push('<span class="rm-chip hr" title="목표 심박"><strong>' + seg.targetHr + '</strong>♥</span>');
+        if (seg.limitHr != null) chips.push('<span class="rm-chip hr" title="제한 심박"><strong>' + seg.limitHr + '</strong>♥↓</span>');
         if (seg.note) chips.push('<span class="rm-chip">' + escapeHtml(seg.note) + '</span>');
         const tg = $('#rm-targets');
         if (tg) tg.innerHTML = chips.join('') || '<span class="rm-chip">목표 미설정</span>';
@@ -5007,6 +5140,9 @@
         drawRideElevCanvas(seg, inThis ? near.index : null);
         drawRideMinimap(pt.dist, seg);
         updateRideMapForSeg(seg, inThis ? pt : state.currentGpx.points[seg.startIdx]);
+        if (rideState.tab === 'course') updateRideCourseMap(pt);
+      } else if (rideState.tab === 'course') {
+        updateRideCourseMap(pt);
       }
 
       const off = near.offRouteKm > 0.08;
