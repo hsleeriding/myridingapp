@@ -81,7 +81,7 @@
 </head>
 <body>
   <h1>📱 Mobile Sensor Lab</h1>
-  <div class="sub">위치·가속도·자이로·기울기·방향·자기계를 검사합니다. 측정값과 로그는 외부 서버로 전송하지 않습니다.</div>
+  <div class="sub">위치·가속도·자이로·기울기·방향을 검사합니다. 측정값과 로그는 외부 서버로 전송하지 않습니다.</div>
 
   <div id="errorSummary" class="error-summary">
     <span>⚠️ 오류가 발생했습니다. 로그에서 자세한 내용을 확인하세요.</span>
@@ -100,7 +100,6 @@
     <button class="tab" data-tab="motion" data-sensor="motion">↗ 가속도<span class="err-dot"></span></button>
     <button class="tab" data-tab="gyro" data-sensor="gyro">⟳ 자이로<span class="err-dot"></span></button>
     <button class="tab" data-tab="orientation" data-sensor="orientation">🧭 방향/기울기<span class="err-dot"></span></button>
-    <button class="tab" data-tab="mag" data-sensor="mag">🧲 자기계<span class="err-dot"></span></button>
     <button class="tab" data-tab="support" data-sensor="support">⚙ 지원<span class="err-dot"></span></button>
   </div>
 
@@ -181,6 +180,7 @@
         <div class="metric"><div class="k">beta</div><div id="obeta" class="v">—</div><div class="u">deg</div></div>
         <div class="metric"><div class="k">gamma</div><div id="ogamma" class="v">—</div><div class="u">deg</div></div>
         <div class="metric"><div class="k">absolute</div><div id="oabs" class="v">—</div><div class="u">boolean</div></div>
+        <div class="metric"><div class="k">Event source</div><div id="orientSource" class="v">—</div><div class="u">relative / absolute</div></div>
         <div class="metric"><div class="k">Event count</div><div id="orientCount" class="v">0</div><div class="u">count</div></div>
         <div class="metric"><div class="k">Approx rate</div><div id="orientHz" class="v">—</div><div class="u">Hz</div></div>
       </div>
@@ -212,24 +212,10 @@
         <div class="metric"><div class="k">Heading visual</div><div id="compassDeg" class="v">—</div><div class="u">deg</div></div>
         <div class="metric"><div class="k">8방위</div><div id="compassDir" class="v">—</div><div class="u">N / NE / E ...</div></div>
       </div>
-      <div class="small" style="margin-top:8px">나침반 바늘은 브라우저 orientation 값을 시각화합니다. 절대적인 북쪽과 항상 일치한다고 가정하면 안 됩니다.</div>
-    </div>
-  </section>
-
-  <!-- 자기계 -->
-  <section id="mag" class="panel">
-    <div class="card">
-      <h2>자기계 — raw 자기장</h2>
-      <div id="magSupport" class="status"><span class="dot"></span><span>측정 전</span></div>
-      <div class="grid" style="margin-top:8px">
-        <div class="metric"><div class="k">X</div><div id="mx" class="v">—</div><div class="u">µT</div></div>
-        <div class="metric"><div class="k">Y</div><div id="my" class="v">—</div><div class="u">µT</div></div>
-        <div class="metric"><div class="k">Z</div><div id="mz" class="v">—</div><div class="u">µT</div></div>
-        <div class="metric"><div class="k">Magnitude</div><div id="mmag" class="v">—</div><div class="u">µT</div></div>
-        <div class="metric"><div class="k">Samples</div><div id="mcount" class="v">0</div><div class="u">count</div></div>
-        <div class="metric"><div class="k">Rate</div><div id="mhz" class="v">—</div><div class="u">Hz</div></div>
+      <div class="small" style="margin-top:8px">
+        absolute 이벤트가 지원되면 우선 사용합니다.<br>
+        그래도 실제 나침반과 차이가 날 수 있습니다. (좌표계/보정 차이)
       </div>
-      <div class="small" style="margin-top:8px">지원/권한/보안정책 때문에 사용하지 못할 수 있습니다. (안드로이드 크롬 일부만 지원)</div>
     </div>
   </section>
 
@@ -270,20 +256,19 @@
   const S = {
     gpsWatch: null,
     motion: false,
-    mag: null,
     gps: [],
     acc: [],
     gyro: [],
     motionCount: 0,
     gyroCount: 0,
     orientCount: 0,
-    magCount: 0,
     motionStart: 0,
     gyroStart: 0,
     orientStart: 0,
-    magStart: 0,
     errors: 0,
-    errorTabs: {}
+    errorTabs: {},
+    hasAbsolute: false,
+    lastOrientSource: "—"
   };
 
   function fmt(v, d = 3) {
@@ -451,7 +436,7 @@
     }
   }
 
-  // ===== Motion / Gyro / Orientation =====
+  // ===== Motion / Gyro =====
   function motion(e) {
     try {
       S.motionCount++;
@@ -509,11 +494,22 @@
     }
   }
 
-  function orientation(e) {
+  // ===== Orientation (relative + absolute) =====
+  function handleOrientation(e, source) {
     try {
+      // absolute 이벤트가 오면 그걸 우선 사용
+      if (source === "absolute") {
+        S.hasAbsolute = true;
+      } else if (S.hasAbsolute) {
+        // absolute가 이미 들어오고 있으면 relative는 무시
+        return;
+      }
+
       S.orientCount++;
       if (!S.orientStart) S.orientStart = performance.now();
 
+      S.lastOrientSource = source;
+      $("orientSource").textContent = source;
       $("oalpha").textContent = fmt(e.alpha, 2);
       $("obeta").textContent = fmt(e.beta, 2);
       $("ogamma").textContent = fmt(e.gamma, 2);
@@ -531,14 +527,27 @@
       $("horizon").style.transform = `translateY(${Math.max(-45, Math.min(45, be)) * 1.8}px) rotate(${-ga}deg)`;
 
       if (Number.isFinite(e.alpha)) {
-        const h = ((e.alpha % 360) + 360) % 360;
-        $("compassDeg").textContent = fmt(h, 1);
-        $("compassDir").textContent = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(h / 45) % 8];
-        $("needle").style.transform = `translate(-50%,-50%) rotate(${h}deg)`;
+        // absolute일 때 많은 기기에서 360 - alpha 가 실제 북쪽 방향에 더 가깝습니다
+        let heading = ((e.alpha % 360) + 360) % 360;
+        if (e.absolute === true || source === "absolute") {
+          heading = (360 - heading) % 360;
+        }
+
+        $("compassDeg").textContent = fmt(heading, 1);
+        $("compassDir").textContent = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(heading / 45) % 8];
+        $("needle").style.transform = `translate(-50%,-50%) rotate(${heading}deg)`;
       }
     } catch (x) {
-      error("orientation", x, "deviceorientation");
+      error("orientation", x, source);
     }
+  }
+
+  function orientationRelative(e) {
+    handleOrientation(e, "relative");
+  }
+
+  function orientationAbsolute(e) {
+    handleOrientation(e, "absolute");
   }
 
   async function startMotion() {
@@ -552,15 +561,30 @@
           log("Motion 권한이 허용되지 않아 값이 안 들어올 수 있습니다.", "warn");
         }
       }
+      if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+        const p = await DeviceOrientationEvent.requestPermission();
+        log("Orientation permission: " + p);
+        if (p !== "granted") {
+          log("Orientation 권한이 허용되지 않아 값이 안 들어올 수 있습니다.", "warn");
+        }
+      }
 
-      // 올바른 검사 방식
       if (!("DeviceMotionEvent" in window)) {
         throw new Error("DeviceMotionEvent 없음");
       }
 
       window.addEventListener("devicemotion", motion, true);
       window.addEventListener("devicemotion", gyro, true);
-      window.addEventListener("deviceorientation", orientation, true);
+
+      // 상대 + 절대 둘 다 등록
+      window.addEventListener("deviceorientation", orientationRelative, true);
+      if ("ondeviceorientationabsolute" in window) {
+        window.addEventListener("deviceorientationabsolute", orientationAbsolute, true);
+        log("deviceorientationabsolute 지원됨 → 절대 방향 우선 사용");
+      } else {
+        log("deviceorientationabsolute 미지원 → 상대 방향만 사용", "warn");
+      }
+
       S.motion = true;
       log("가속도 / 자이로 / 방향 listener 시작");
     } catch (e) {
@@ -572,66 +596,13 @@
     try {
       window.removeEventListener("devicemotion", motion, true);
       window.removeEventListener("devicemotion", gyro, true);
-      window.removeEventListener("deviceorientation", orientation, true);
+      window.removeEventListener("deviceorientation", orientationRelative, true);
+      window.removeEventListener("deviceorientationabsolute", orientationAbsolute, true);
       S.motion = false;
+      S.hasAbsolute = false;
       log("모션 센서 중지");
     } catch (e) {
       error("motion", e, "센서 중지");
-    }
-  }
-
-  // ===== Magnetometer =====
-  function setMag(type, msg) {
-    $("magSupport").innerHTML = `<span class="dot ${type}"></span><span>${esc(msg)}</span>`;
-  }
-
-  function magRead() {
-    try {
-      S.magCount++;
-      if (!S.magStart) S.magStart = performance.now();
-
-      const x = S.mag.x, y = S.mag.y, z = S.mag.z;
-      $("mx").textContent = fmt(x, 2);
-      $("my").textContent = fmt(y, 2);
-      $("mz").textContent = fmt(z, 2);
-      $("mmag").textContent = fmt(mag(x, y, z), 2);
-      $("mcount").textContent = String(S.magCount);
-
-      const sec = (performance.now() - S.magStart) / 1000;
-      if (sec > 0) $("mhz").textContent = fmt(S.magCount / sec, 1);
-    } catch (e) {
-      error("mag", e, "Magnetometer reading");
-    }
-  }
-
-  function startMag() {
-    try {
-      // 올바른 검사 방식
-      if (!("Magnetometer" in window)) {
-        throw new Error("Magnetometer API 없음");
-      }
-
-      S.mag = new Magnetometer({ frequency: 20 });
-      S.mag.addEventListener("reading", magRead);
-      S.mag.addEventListener("error", e => error("mag", e.error || new Error("Magnetometer error"), "sensor error"));
-      S.mag.start();
-      setMag("good", "Magnetometer 시작됨");
-      log("Magnetometer 시작 요청");
-    } catch (e) {
-      setMag("bad", "사용 불가");
-      error("mag", e, "Magnetometer 시작");
-    }
-  }
-
-  function stopMag() {
-    try {
-      if (S.mag) {
-        S.mag.stop();
-        S.mag = null;
-        log("Magnetometer 중지");
-      }
-    } catch (e) {
-      error("mag", e, "Magnetometer 중지");
     }
   }
 
@@ -699,10 +670,9 @@
         row("Geolocation", "geolocation" in navigator ? "지원" : "미지원"),
         row("DeviceMotionEvent", "DeviceMotionEvent" in window ? "지원" : "미지원"),
         row("DeviceOrientationEvent", "DeviceOrientationEvent" in window ? "지원" : "미지원"),
+        row("deviceorientationabsolute", "ondeviceorientationabsolute" in window ? "지원" : "미지원"),
         row("Accelerometer", "Accelerometer" in window ? "지원" : "미지원"),
-        row("Gyroscope", "Gyroscope" in window ? "지원" : "미지원"),
-        row("Magnetometer", "Magnetometer" in window ? "지원" : "미지원"),
-        row("AbsoluteOrientationSensor", "AbsoluteOrientationSensor" in window ? "지원" : "미지원")
+        row("Gyroscope", "Gyroscope" in window ? "지원" : "미지원")
       ].join("");
 
       const items = [
@@ -710,8 +680,8 @@
         ["선형 가속도", "DeviceMotionEvent" in window, S.motionCount, "devicemotion.acceleration"],
         ["중력 포함 가속도", "DeviceMotionEvent" in window, S.motionCount, "devicemotion.accelerationIncludingGravity"],
         ["자이로 회전속도", "DeviceMotionEvent" in window, S.gyroCount, "devicemotion.rotationRate"],
-        ["기기 기울기", "DeviceOrientationEvent" in window, S.orientCount, "deviceorientation beta/gamma"],
-        ["Raw 자기장 XYZ", "Magnetometer" in window, S.magCount, "Magnetometer"]
+        ["기기 기울기 (relative)", "DeviceOrientationEvent" in window, S.orientCount, "deviceorientation"],
+        ["절대 방향 (absolute)", "ondeviceorientationabsolute" in window, S.hasAbsolute ? S.orientCount : 0, "deviceorientationabsolute"]
       ];
 
       $("supportTable").innerHTML = items.map(x =>
@@ -728,14 +698,12 @@
     log("전체 측정 시작");
     startGPS();
     await startMotion();
-    startMag();
     updateSupport();
   }
 
   function stopAll() {
     stopGPS();
     stopMotion();
-    stopMag();
     log("전체 측정 중지");
     updateSupport();
   }
