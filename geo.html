@@ -2,332 +2,304 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="color-scheme" content="dark light">
-<title>Browser Geolocation Tester</title>
+<title>Mobile Sensor Lab</title>
 <style>
-  :root { --gap: 10px; }
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    padding: max(12px, env(safe-area-inset-top)) 12px
-             max(16px, env(safe-area-inset-bottom)) 12px;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    line-height: 1.4;
-    font-size: 15px;
-    background: Canvas;
-    color: CanvasText;
-  }
-  h1 { font-size: 21px; margin: 4px 0 8px; }
-  h2 { font-size: 16px; margin: 0 0 8px; }
-  .sub { opacity: .72; font-size: 12px; margin-bottom: 12px; }
-  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-  button {
-    min-height: 46px; border: 1px solid #8885; border-radius: 9px;
-    background: ButtonFace; color: ButtonText; font-size: 15px;
-    padding: 8px; touch-action: manipulation;
-  }
-  button:active { transform: translateY(1px); }
-  .full { grid-column: 1 / -1; }
-  section {
-    border: 1px solid #8885; border-radius: 10px;
-    padding: 10px; margin: 10px 0;
-    overflow: hidden;
-  }
-  .row {
-    display: grid; grid-template-columns: minmax(135px, 42%) 1fr;
-    gap: 8px; padding: 5px 0; border-bottom: 1px solid #8882;
-  }
-  .row:last-child { border-bottom: 0; }
-  .key { opacity: .72; word-break: break-word; }
-  .val { font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-         word-break: break-all; text-align: right; }
-  .good { font-weight: 700; }
-  .warn { font-weight: 700; }
-  #log {
-    max-height: 260px; overflow: auto; white-space: pre-wrap;
-    font: 12px/1.45 ui-monospace, monospace;
-    background: #8881; padding: 8px; border-radius: 7px;
-  }
-  .small { font-size: 12px; opacity: .75; }
-  .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-  @media (max-width: 430px) {
-    body { font-size: 14px; }
-    .row { grid-template-columns: 46% 54%; }
-    button { font-size: 14px; }
-  }
+:root{--bg:#0c1016;--card:#151b24;--card2:#10151c;--line:#2a3442;--txt:#eef3f8;--muted:#91a0b0;--accent:#65b5ff;--good:#65d694;--warn:#ffca62;--bad:#ff6d7a}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{padding:max(12px,env(safe-area-inset-top)) 10px max(18px,env(safe-area-inset-bottom));font-size:14px}
+h1{font-size:20px;margin:4px 0 2px}.sub{color:var(--muted);font-size:12px;margin-bottom:12px}
+.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+button{appearance:none;border:1px solid var(--line);background:#1b2430;color:var(--txt);border-radius:10px;min-height:44px;padding:8px 10px;font-size:14px;font-weight:600;touch-action:manipulation}
+button.primary{background:#213b54;border-color:#355e81}button:disabled{opacity:.5}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;position:sticky;top:0;background:var(--bg);z-index:5}
+.tab{flex:0 0 auto;min-height:40px;padding:7px 13px;border-radius:20px}.tab.active{background:var(--accent);color:#07111a;border-color:var(--accent)}
+.panel{display:none}.panel.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin:9px 0}.card h2{font-size:15px;margin:0 0 9px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.metric{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px}.metric .k{font-size:11px;color:var(--muted)}.metric .v{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:17px;margin-top:2px;word-break:break-all}.metric .u{font-size:11px;color:var(--muted)}
+.row{display:grid;grid-template-columns:42% 58%;border-bottom:1px solid #ffffff0d;padding:6px 0}.row:last-child{border-bottom:0}.key{color:var(--muted)}.val{text-align:right;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.status{display:flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+.small{font-size:11px;color:var(--muted)}pre{margin:0;white-space:pre-wrap;word-break:break-all;font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;max-height:300px;overflow:auto}
+.visual{display:flex;justify-content:center;align-items:center}
+.levelWrap{position:relative;width:min(82vw,320px);height:min(58vw,230px);min-height:190px;overflow:hidden;border-radius:12px;background:#0b1118;border:1px solid var(--line)}
+.horizon{position:absolute;left:-30%;top:50%;width:160%;height:170%;background:linear-gradient(#42719a 0 48%,#a66d4d 48% 50%,#657a43 50%);transform-origin:center center}
+.levelCross:before,.levelCross:after{content:"";position:absolute;left:50%;top:50%;background:#fff;width:2px;height:72%;transform:translate(-50%,-50%);opacity:.85}.levelCross:after{width:72%;height:2px}
+.bubble{position:absolute;left:50%;top:50%;width:24px;height:24px;border:2px solid #fff;border-radius:50%;transform:translate(-50%,-50%);box-shadow:0 0 0 2px #0005}
+.compass{position:relative;width:min(76vw,280px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,#161e29 0 57%,#0c1118 58% 100%);border:3px solid var(--line);margin:auto;overflow:hidden}
+.compass .letter{position:absolute;font-weight:800;font-size:16px}.N{top:7%;left:50%;transform:translateX(-50%);color:#ff6975}.E{right:7%;top:50%;transform:translateY(-50%)}.S{bottom:7%;left:50%;transform:translateX(-50%)}.W{left:7%;top:50%;transform:translateY(-50%)}
+.compass .needle{position:absolute;left:50%;top:50%;height:82%;width:3px;background:linear-gradient(to bottom,#ff6672 0 50%,#d9e4ef 50%);transform:translate(-50%,-50%) rotate(0deg);transform-origin:center}.compass .center{position:absolute;left:50%;top:50%;width:13px;height:13px;border-radius:50%;background:#fff;transform:translate(-50%,-50%)}
+.cardCanvas{height:190px;background:#0b1118;border:1px solid var(--line);border-radius:10px;overflow:hidden}canvas{width:100%;height:100%;display:block}
+.log{max-height:280px;overflow:auto;font:11px/1.4 ui-monospace,monospace;background:#0a0e14;padding:8px;border-radius:8px}
+.footer{color:var(--muted);font-size:11px;text-align:center;padding:12px 2px}
+@media(min-width:700px){body{max-width:900px;margin:auto;font-size:15px}.grid{grid-template-columns:repeat(3,1fr)}.toolbar{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
-<h1>📍 Browser Geolocation Tester</h1>
-<div class="sub">
-  이 페이지는 위치정보를 외부 서버로 전송하지 않습니다.
-  브라우저가 제공한 값을 이 페이지 안에서만 표시합니다.
+<h1>📱 Mobile Sensor Lab</h1>
+<div class="sub">위치·가속도·자이로·기울기·방향·자기계를 한 번에 점검합니다. 측정값은 이 페이지에서만 처리하며 서버로 전송하지 않습니다.</div>
+
+<div class="toolbar">
+<button id="startAll" class="primary">▶ 전체 측정 시작</button>
+<button id="stopAll">■ 전체 측정 중지</button>
+<button id="onceGps">📍 GPS 1회</button>
+<button id="clearAll">초기화</button>
 </div>
 
-<div class="buttons">
-  <button id="once">현재 위치 1회 측정</button>
-  <button id="watch">연속 측정 시작</button>
-  <button id="stop">연속 측정 중지</button>
-  <button id="clear">화면 초기화</button>
-  <button id="copy" class="full">현재 결과 JSON 복사</button>
+<div class="tabs">
+<button class="tab active" data-tab="gps">📍 GPS</button>
+<button class="tab" data-tab="motion">↗ 가속도</button>
+<button class="tab" data-tab="gyro">⟳ 자이로</button>
+<button class="tab" data-tab="orientation">🧭 방향/기울기</button>
+<button class="tab" data-tab="mag">🧲 자기계</button>
+<button class="tab" data-tab="support">⚙ 지원</button>
+<button class="tab" data-tab="logtab">▤ 로그</button>
 </div>
 
-<section>
-  <h2>환경</h2>
-  <div id="env"></div>
+<section id="gps" class="panel active">
+<div class="card"><h2>현재 위치</h2><div class="grid">
+<div class="metric"><div class="k">Latitude</div><div id="gpsLat" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">Longitude</div><div id="gpsLon" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">Accuracy</div><div id="gpsAcc" class="v">—</div><div class="u">m</div></div>
+<div class="metric"><div class="k">Altitude</div><div id="gpsAlt" class="v">—</div><div class="u">m</div></div>
+<div class="metric"><div class="k">Altitude accuracy</div><div id="gpsAltAcc" class="v">—</div><div class="u">m</div></div>
+<div class="metric"><div class="k">Speed</div><div id="gpsSpeed" class="v">—</div><div class="u">m/s · km/h</div></div>
+<div class="metric"><div class="k">Heading</div><div id="gpsHeading" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">Timestamp</div><div id="gpsTime" class="v">—</div><div class="u">position timestamp</div></div>
+</div></div>
+<div class="card"><h2>연속 측정 통계</h2><div id="gpsStats"></div></div>
 </section>
 
-<section>
-  <h2>현재 위치</h2>
-  <div id="position"></div>
+<section id="motion" class="panel">
+<div class="card"><h2>가속도계 — 선형 가속도</h2><div class="grid">
+<div class="metric"><div class="k">X</div><div id="ax" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Y</div><div id="ay" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Z</div><div id="az" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Magnitude</div><div id="amag" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Event interval</div><div id="motionInterval" class="v">—</div><div class="u">ms</div></div>
+<div class="metric"><div class="k">Event rate</div><div id="motionHz" class="v">—</div><div class="u">Hz</div></div>
+</div></div>
+<div class="card"><h2>중력 포함 가속도</h2><div class="grid">
+<div class="metric"><div class="k">X</div><div id="gax" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Y</div><div id="gay" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Z</div><div id="gaz" class="v">—</div><div class="u">m/s²</div></div>
+<div class="metric"><div class="k">Magnitude</div><div id="gamag" class="v">—</div><div class="u">m/s²</div></div>
+</div></div>
+<div class="card"><h2>실시간 가속도 그래프</h2><div class="cardCanvas"><canvas id="accCanvas"></canvas></div></div>
 </section>
 
-<section>
-  <h2>측정 통계</h2>
-  <div id="stats"></div>
+<section id="gyro" class="panel">
+<div class="card"><h2>자이로 — 회전 속도</h2><div class="grid">
+<div class="metric"><div class="k">Alpha</div><div id="ra" class="v">—</div><div class="u">deg/s</div></div>
+<div class="metric"><div class="k">Beta</div><div id="rb" class="v">—</div><div class="u">deg/s</div></div>
+<div class="metric"><div class="k">Gamma</div><div id="rg" class="v">—</div><div class="u">deg/s</div></div>
+<div class="metric"><div class="k">Magnitude</div><div id="rmag" class="v">—</div><div class="u">deg/s</div></div>
+<div class="metric"><div class="k">Event interval</div><div id="gyroInterval" class="v">—</div><div class="u">ms</div></div>
+<div class="metric"><div class="k">Event rate</div><div id="gyroHz" class="v">—</div><div class="u">Hz</div></div>
+</div></div>
+<div class="card"><h2>회전속도 그래프</h2><div class="cardCanvas"><canvas id="gyroCanvas"></canvas></div></div>
 </section>
 
-<section>
-  <h2>이벤트 로그</h2>
-  <div id="log"></div>
+<section id="orientation" class="panel">
+<div class="card"><h2>기기 자세 / 방향</h2><div class="grid">
+<div class="metric"><div class="k">alpha</div><div id="oalpha" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">beta</div><div id="obeta" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">gamma</div><div id="ogamma" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">absolute</div><div id="oabs" class="v">—</div><div class="u">boolean</div></div>
+<div class="metric"><div class="k">Event count</div><div id="orientCount" class="v">0</div><div class="u">count</div></div>
+<div class="metric"><div class="k">Approx rate</div><div id="orientHz" class="v">—</div><div class="u">Hz</div></div>
+</div></div>
+<div class="card"><h2>수평계 / 기울기</h2><div class="visual"><div class="levelWrap"><div id="horizon" class="horizon"></div><div class="levelCross"></div><div class="bubble"></div></div></div>
+<div class="grid" style="margin-top:10px">
+<div class="metric"><div class="k">좌우 gamma</div><div id="levelGamma" class="v">—</div><div class="u">deg</div></div>
+<div class="metric"><div class="k">앞뒤 beta</div><div id="levelBeta" class="v">—</div><div class="u">deg</div></div>
+</div></div>
+<div class="card"><h2>방향 시각화</h2><div class="compass"><div class="letter N">N</div><div class="letter E">E</div><div class="letter S">S</div><div class="letter W">W</div><div id="needle" class="needle"></div><div class="center"></div></div>
+<div class="grid" style="margin-top:10px"><div class="metric"><div class="k">Heading visual</div><div id="compassDeg" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">8방위</div><div id="compassDir" class="v">—</div><div class="u">N / NE / E ...</div></div></div>
+<div class="small" style="margin-top:7px">나침반 바늘은 orientation 값을 시각화한 것입니다. absolute=true인 경우에도 기기/브라우저 구현에 따라 보정 방식이 다를 수 있습니다.</div></div>
 </section>
+
+<section id="mag" class="panel">
+<div class="card"><h2>자기계 — raw 자기장</h2><div id="magSupport" class="status"><span class="dot"></span><span>확인 전</span></div>
+<div class="grid" style="margin-top:8px">
+<div class="metric"><div class="k">X</div><div id="mx" class="v">—</div><div class="u">µT</div></div>
+<div class="metric"><div class="k">Y</div><div id="my" class="v">—</div><div class="u">µT</div></div>
+<div class="metric"><div class="k">Z</div><div id="mz" class="v">—</div><div class="u">µT</div></div>
+<div class="metric"><div class="k">Magnitude</div><div id="mmag" class="v">—</div><div class="u">µT</div></div>
+<div class="metric"><div class="k">Samples</div><div id="mcount" class="v">0</div><div class="u">count</div></div>
+<div class="metric"><div class="k">Rate</div><div id="mhz" class="v">—</div><div class="u">Hz</div></div>
+</div><div class="small" style="margin-top:8px">지원하지 않거나 보안정책/권한으로 막히면 값이 나오지 않습니다.</div></div>
+</section>
+
+<section id="support" class="panel">
+<div class="card"><h2>브라우저 / 실행 환경</h2><div id="env"></div></div>
+<div class="card"><h2>데이터별 실제 상태</h2><div id="supportTable"></div></div>
+</section>
+
+<section id="logtab" class="panel">
+<div class="card"><h2>이벤트 로그</h2><div id="log" class="log">페이지 시작</div></div>
+<div class="card"><h2>현재 데이터 JSON</h2><pre id="json">아직 측정된 데이터가 없습니다.</pre></div>
+</section>
+
+<div class="footer">외부 서버 전송 코드 없음 · 모든 측정값/그래프/통계는 이 페이지 안에서만 처리</div>
 
 <script>
 "use strict";
+const $=id=>document.getElementById(id);
+let gpsWatch=null, motionRunning=false, magSensor=null;
+let motionCount=0,orientCount=0,gyroCount=0,magCount=0;
+let motionStart=0,orientStart=0,gyroStart=0,magStart=0;
+const accHistory=[],gyroHistory=[],gpsSamples=[];
+let latest={gps:null,motion:null,orientation:null,gyroscope:null,magnetometer:null};
 
-const $ = id => document.getElementById(id);
-let watchId = null;
-let lastPosition = null;
-let latestData = null;
-let samples = [];
-let startedAt = null;
+function fmt(v,d=3){return Number.isFinite(v)?Number(v).toFixed(d):"—"}
+function esc(v){return String(v??"—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}
+function row(k,v){return `<div class="row"><div class="key">${esc(k)}</div><div class="val">${esc(v)}</div></div>`}
+function mag3(x,y,z){return Math.sqrt((x||0)**2+(y||0)**2+(z||0)**2)}
+function addLog(s){$("log").textContent=`[${new Date().toLocaleTimeString()}] ${s}\n`+$("log").textContent}
+function setStatus(id,type,msg){$(id).innerHTML=`<span class="dot ${type}"></span><span>${esc(msg)}</span>`}
+function updateJSON(){$("json").textContent=JSON.stringify(latest,null,2)}
 
-function esc(v) {
-  return String(v ?? "—")
-    .replaceAll("&","&amp;").replaceAll("<","&lt;")
-    .replaceAll(">","&gt;").replaceAll('"',"&quot;");
+function gpsSuccess(p){
+ const c=p.coords;
+ latest.gps={timestamp:p.timestamp,timestampISO:new Date(p.timestamp).toISOString(),latitude:c.latitude,longitude:c.longitude,accuracy:c.accuracy,altitude:c.altitude,altitudeAccuracy:c.altitudeAccuracy,heading:c.heading,speed:c.speed};
+ $("gpsLat").textContent=fmt(c.latitude,8);$("gpsLon").textContent=fmt(c.longitude,8);$("gpsAcc").textContent=fmt(c.accuracy,2);
+ $("gpsAlt").textContent=c.altitude==null?"null":fmt(c.altitude,2);$("gpsAltAcc").textContent=c.altitudeAccuracy==null?"null":fmt(c.altitudeAccuracy,2);
+ $("gpsSpeed").textContent=c.speed==null?"null":`${fmt(c.speed,3)} / ${fmt(c.speed*3.6,2)}`;
+ $("gpsHeading").textContent=c.heading==null?"null":fmt(c.heading,2);$("gpsTime").textContent=new Date(p.timestamp).toLocaleTimeString();
+ gpsSamples.push(p);if(gpsSamples.length>5000)gpsSamples.shift();
+ const acc=gpsSamples.map(x=>x.coords.accuracy).filter(Number.isFinite),alt=gpsSamples.map(x=>x.coords.altitude).filter(Number.isFinite),sp=gpsSamples.map(x=>x.coords.speed).filter(Number.isFinite);
+ let h=row("샘플 수",gpsSamples.length);
+ if(acc.length)h+=row("accuracy min / avg / max",`${fmt(Math.min(...acc),2)} / ${fmt(acc.reduce((a,b)=>a+b,0)/acc.length,2)} / ${fmt(Math.max(...acc),2)} m`);
+ if(alt.length)h+=row("altitude min / avg / max",`${fmt(Math.min(...alt),2)} / ${fmt(alt.reduce((a,b)=>a+b,0)/alt.length,2)} / ${fmt(Math.max(...alt),2)} m`);
+ if(sp.length)h+=row("speed max",`${fmt(Math.max(...sp)*3.6,2)} km/h`);
+ $("gpsStats").innerHTML=h;updateJSON();
+}
+function gpsError(e){addLog(`GPS error ${e.code}: ${e.message||""}`)}
+function startGPS(){
+ if(!navigator.geolocation){addLog("Geolocation API 없음");return}
+ if(gpsWatch!==null)return;
+ gpsWatch=navigator.geolocation.watchPosition(gpsSuccess,gpsError,{enableHighAccuracy:true,maximumAge:0,timeout:30000});
+ addLog("GPS watchPosition 시작");
+}
+function stopGPS(){if(gpsWatch!==null){navigator.geolocation.clearWatch(gpsWatch);gpsWatch=null;addLog("GPS 중지")}}
+function onceGPS(){
+ if(!navigator.geolocation){addLog("Geolocation API 없음");return}
+ navigator.geolocation.getCurrentPosition(gpsSuccess,gpsError,{enableHighAccuracy:true,maximumAge:0,timeout:30000});addLog("GPS 1회 측정 요청")
 }
 
-function row(k, v, cls="") {
-  return `<div class="row"><div class="key">${esc(k)}</div><div class="val ${cls}">${esc(v)}</div></div>`;
+function motionHandler(e){
+ motionCount++;if(!motionStart)motionStart=performance.now();
+ const a=e.acceleration||{},g=e.accelerationIncludingGravity||{},r=e.rotationRate||{};
+ latest.motion={acceleration:{x:a.x,y:a.y,z:a.z},accelerationIncludingGravity:{x:g.x,y:g.y,z:g.z},interval:e.interval};
+ $("ax").textContent=fmt(a.x);$("ay").textContent=fmt(a.y);$("az").textContent=fmt(a.z);$("amag").textContent=fmt(mag3(a.x,a.y,a.z));
+ $("gax").textContent=fmt(g.x);$("gay").textContent=fmt(g.y);$("gaz").textContent=fmt(g.z);$("gamag").textContent=fmt(mag3(g.x,g.y,g.z));
+ if(e.interval!=null){$("motionInterval").textContent=fmt(e.interval,1);$("motionHz").textContent=fmt(1000/e.interval,1)}
+ accHistory.push({x:a.x||0,y:a.y||0,z:a.z||0});if(accHistory.length>220)accHistory.shift();drawChart("accCanvas",accHistory,"acc");
+ updateJSON();
+}
+function gyroHandler(e){
+ const r=e.rotationRate||{};
+ if(r.alpha==null&&r.beta==null&&r.gamma==null)return;
+ gyroCount++;if(!gyroStart)gyroStart=performance.now();
+ latest.gyroscope={rotationRate:{alpha:r.alpha,beta:r.beta,gamma:r.gamma},interval:e.interval};
+ $("ra").textContent=fmt(r.alpha,2);$("rb").textContent=fmt(r.beta,2);$("rg").textContent=fmt(r.gamma,2);$("rmag").textContent=fmt(mag3(r.alpha,r.beta,r.gamma),2);
+ if(e.interval!=null){$("gyroInterval").textContent=fmt(e.interval,1);$("gyroHz").textContent=fmt(1000/e.interval,1)}
+ gyroHistory.push({x:r.alpha||0,y:r.beta||0,z:r.gamma||0});if(gyroHistory.length>220)gyroHistory.shift();drawChart("gyroCanvas",gyroHistory,"gyro");updateJSON();
+}
+async function requestMotionPermission(){
+ if(typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){
+  try{return await DeviceMotionEvent.requestPermission()}catch(e){addLog("Motion 권한 요청 실패: "+e);return"denied"}
+ }
+ return"not-required";
+}
+async function startMotion(){
+ if(motionRunning)return;
+ const p=await requestMotionPermission();addLog("Motion permission: "+p);
+ window.addEventListener("devicemotion",motionHandler,true);window.addEventListener("devicemotion",gyroHandler,true);window.addEventListener("deviceorientation",orientationHandler,true);
+ motionRunning=true;addLog("Motion / Gyro / Orientation listener 시작");
+}
+function stopMotion(){window.removeEventListener("devicemotion",motionHandler,true);window.removeEventListener("devicemotion",gyroHandler,true);window.removeEventListener("deviceorientation",orientationHandler,true);motionRunning=false}
+
+function orientationHandler(e){
+ orientCount++;if(!orientStart)orientStart=performance.now();
+ latest.orientation={alpha:e.alpha,beta:e.beta,gamma:e.gamma,absolute:e.absolute};
+ $("oalpha").textContent=fmt(e.alpha,2);$("obeta").textContent=fmt(e.beta,2);$("ogamma").textContent=fmt(e.gamma,2);$("oabs").textContent=String(e.absolute);
+ $("orientCount").textContent=orientCount;const sec=(performance.now()-orientStart)/1000;if(sec>0)$("orientHz").textContent=fmt(orientCount/sec,1);
+ $("levelGamma").textContent=fmt(e.gamma,2);$("levelBeta").textContent=fmt(e.beta,2);
+ const gamma=Number.isFinite(e.gamma)?e.gamma:0,beta=Number.isFinite(e.beta)?e.beta:0,pitch=Math.max(-45,Math.min(45,beta));
+ $("horizon").style.transform=`translateY(${pitch*1.8}px) rotate(${-gamma}deg)`;
+ let heading=Number.isFinite(e.alpha)?((e.alpha%360)+360)%360:null;
+ if(heading!=null){$("compassDeg").textContent=fmt(heading,1);$("compassDir").textContent=dir8(heading);$("needle").style.transform=`translate(-50%,-50%) rotate(${heading}deg)`}
+ latest.orientation.headingVisual=heading;updateJSON();
+}
+function dir8(d){return["N","NE","E","SE","S","SW","W","NW"][Math.round(d/45)%8]}
+
+function magHandler(){
+ magCount++;if(!magStart)magStart=performance.now();
+ const x=magSensor.x,y=magSensor.y,z=magSensor.z;
+ latest.magnetometer={x,y,z};
+ $("mx").textContent=fmt(x,2);$("my").textContent=fmt(y,2);$("mz").textContent=fmt(z,2);$("mmag").textContent=fmt(mag3(x,y,z),2);$("mcount").textContent=magCount;
+ const sec=(performance.now()-magStart)/1000;if(sec>0)$("mhz").textContent=fmt(magCount/sec,1);updateJSON();
+}
+async function startMag(){
+ if(!("Magnetometer"in window)){setStatus("magSupport","bad","Magnetometer API 없음");return}
+ try{
+  magSensor=new Magnetometer({frequency:20});magSensor.addEventListener("reading",magHandler);
+  magSensor.addEventListener("error",()=>{setStatus("magSupport","bad","자기계 오류/권한 거부");addLog("Magnetometer error")});
+  magSensor.start();setStatus("magSupport","good","Magnetometer 시작됨");addLog("Magnetometer 시작 요청");
+ }catch(e){setStatus("magSupport","bad","사용 불가: "+e.message);addLog("Magnetometer 실패: "+e.message)}
+}
+function stopMag(){if(magSensor){try{magSensor.stop()}catch{};try{magSensor.removeEventListener("reading",magHandler)}catch{};magSensor=null}}
+
+async function startAll(){addLog("전체 측정 시작");startGPS();await startMotion();await startMag();updateSupport()}
+function stopAll(){stopGPS();stopMotion();stopMag();addLog("전체 측정 중지")}
+
+function clearAll(){
+ stopAll();gpsSamples.length=0;accHistory.length=0;gyroHistory.length=0;motionCount=orientCount=gyroCount=magCount=0;motionStart=orientStart=gyroStart=magStart=0;
+ latest={gps:null,motion:null,orientation:null,gyroscope:null,magnetometer:null};
+ [...document.querySelectorAll(".metric .v")].forEach(e=>{if(e.id!=="orientCount"&&e.id!=="mcount")e.textContent="—"});
+ $("orientCount").textContent="0";$("mcount").textContent="0";$("gpsStats").innerHTML=row("상태","초기화됨");$("json").textContent="아직 측정된 데이터가 없습니다.";
+ $("log").textContent="";$("horizon").style.transform="translateY(0) rotate(0deg)";$("needle").style.transform="translate(-50%,-50%) rotate(0deg)";drawChart("accCanvas",[],"acc");drawChart("gyroCanvas",[],"gyro");addLog("초기화 완료");
 }
 
-function fmt(v, digits=6) {
-  if (v === null || v === undefined || Number.isNaN(v)) return "null";
-  return Number(v).toFixed(digits);
+function drawChart(id,data,type){
+ const c=$(id),ctx=c.getContext("2d"),rect=c.getBoundingClientRect(),dpr=devicePixelRatio||1;
+ const w=Math.max(1,Math.floor(rect.width*dpr)),h=Math.max(1,Math.floor(rect.height*dpr));if(c.width!==w||c.height!==h){c.width=w;c.height=h}
+ ctx.clearRect(0,0,w,h);ctx.save();ctx.scale(dpr,dpr);const W=rect.width,H=rect.height;
+ ctx.strokeStyle="#ffffff22";ctx.lineWidth=1;for(let i=1;i<5;i++){const y=i*H/5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}
+ if(!data.length){ctx.restore();return}
+ let max=type==="acc"?10:100;for(const p of data)max=Math.max(max,Math.abs(p.x),Math.abs(p.y),Math.abs(p.z));
+ ["#65b5ff","#65d694","#ffca62"].forEach((col,idx)=>{const k=["x","y","z"][idx];ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();data.forEach((p,i)=>{const x=i/(Math.max(1,data.length-1))*W,y=H/2-(p[k]/max)*(H*.43);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});
+ ctx.fillStyle="#91a0b0";ctx.font="11px ui-monospace,monospace";ctx.fillText(`±${max.toFixed(1)} ${type==="acc"?"m/s²":"deg/s"}`,6,14);ctx.restore();
 }
 
-function log(msg) {
-  const t = new Date().toLocaleTimeString();
-  $("log").textContent = `[${t}] ${msg}\n` + $("log").textContent;
+function updateSupport(){
+ $("env").innerHTML=[
+ row("Protocol",location.protocol),row("Secure Context",isSecureContext?"YES":"NO"),row("URL",location.href),
+ row("User Agent",navigator.userAgent),row("Geolocation","geolocation"in navigator?"지원":"미지원"),
+ row("DeviceMotionEvent","DeviceMotionEvent"in window?"지원":"미지원"),row("DeviceOrientationEvent","DeviceOrientationEvent"in window?"지원":"미지원"),
+ row("Accelerometer","Accelerometer"in window?"지원":"미지원"),row("Gyroscope","Gyroscope"in window?"지원":"미지원"),
+ row("Magnetometer","Magnetometer"in window?"지원":"미지원"),row("AbsoluteOrientationSensor","AbsoluteOrientationSensor"in window?"지원":"미지원")
+ ].join("");
+ const items=[
+ ["GPS 위치","geolocation"in navigator,gpsSamples.length>0,"Geolocation"],
+ ["선형 가속도","DeviceMotionEvent"in window,motionCount>0,"devicemotion.acceleration"],
+ ["중력 포함 가속도","DeviceMotionEvent"in window,motionCount>0,"devicemotion.accelerationIncludingGravity"],
+ ["자이로 회전속도","DeviceMotionEvent"in window,gyroCount>0,"devicemotion.rotationRate"],
+ ["기기 기울기","DeviceOrientationEvent"in window,orientCount>0,"deviceorientation beta/gamma"],
+ ["절대 방향 플래그",DeviceOrientationEvent"in window&&latest.orientation?.absolute===true,latest.orientation?.absolute===true,"orientation.absolute"],
+ ["Raw 자기장 XYZ","Magnetometer"in window,magCount>0,"Magnetometer"],
+ ["독립 Accelerometer","Accelerometer"in window,false,"Generic Sensor"],
+ ["독립 Gyroscope","Gyroscope"in window,false,"Generic Sensor"]
+ ];
+ $("supportTable").innerHTML=items.map(a=>row(a[0],a[2]?"✅ 감지됨":a[1]?"🟡 API 있음 / 값 미수신":"❌ API 없음")+`<div class="small" style="margin-top:-5px">${esc(a[3])}</div>`).join("");
 }
-
-function renderEnv() {
-  const secure = window.isSecureContext;
-  let html = "";
-  html += row("URL", location.href);
-  html += row("Protocol", location.protocol);
-  html += row("Secure Context", secure ? "YES" : "NO", secure ? "good" : "warn");
-  html += row("Geolocation API", "geolocation" in navigator ? "지원됨" : "지원 안 됨");
-  html += row("navigator.userAgent", navigator.userAgent);
-  html += row("언어", navigator.language);
-  html += row("화면", `${screen.width} × ${screen.height} px`);
-  html += row("devicePixelRatio", window.devicePixelRatio);
-  html += row("Permissions API", navigator.permissions ? "지원됨" : "미지원");
-  $("env").innerHTML = html;
-
-  if (navigator.permissions) {
-    navigator.permissions.query({name:"geolocation"}).then(p => {
-      $("env").insertAdjacentHTML("beforeend", row("위치 권한 상태", p.state));
-      p.onchange = () => {
-        log(`위치 권한 변경: ${p.state}`);
-      };
-    }).catch(e => {
-      $("env").insertAdjacentHTML("beforeend", row("위치 권한 상태", "조회 실패"));
-    });
-  }
-}
-
-function renderPosition(pos) {
-  const c = pos.coords;
-  latestData = {
-    timestamp: pos.timestamp,
-    timestampISO: new Date(pos.timestamp).toISOString(),
-    coords: {
-      latitude: c.latitude,
-      longitude: c.longitude,
-      altitude: c.altitude,
-      accuracy: c.accuracy,
-      altitudeAccuracy: c.altitudeAccuracy,
-      heading: c.heading,
-      speed: c.speed
-    }
-  };
-
-  let html = "";
-  html += row("측정 시각", new Date(pos.timestamp).toLocaleString());
-  html += row("timestamp (ms)", pos.timestamp);
-  html += row("latitude", `${fmt(c.latitude, 8)} °`);
-  html += row("longitude", `${fmt(c.longitude, 8)} °`);
-  html += row("accuracy", c.accuracy == null ? "null" : `${fmt(c.accuracy, 2)} m`);
-  html += row("altitude", c.altitude == null ? "null" : `${fmt(c.altitude, 2)} m`);
-  html += row("altitudeAccuracy", c.altitudeAccuracy == null ? "null" : `${fmt(c.altitudeAccuracy, 2)} m`);
-  html += row("heading", c.heading == null ? "null" : `${fmt(c.heading, 2)} °`);
-  html += row("speed", c.speed == null ? "null" : `${fmt(c.speed, 3)} m/s`);
-  html += row("speed (km/h)", c.speed == null ? "null" : `${fmt(c.speed * 3.6, 2)} km/h`);
-  html += row("속도 (knots)", c.speed == null ? "null" : `${fmt(c.speed * 1.943844, 2)} kn`);
-  $("position").innerHTML = html;
-}
-
-function renderStats() {
-  if (!samples.length) {
-    $("stats").innerHTML = row("샘플 수", 0);
-    return;
-  }
-
-  const acc = samples.map(x => x.coords.accuracy).filter(Number.isFinite);
-  const alt = samples.map(x => x.coords.altitude).filter(Number.isFinite);
-  const spd = samples.map(x => x.coords.speed).filter(Number.isFinite);
-
-  let html = "";
-  html += row("샘플 수", samples.length);
-  html += row("연속 측정 시간", startedAt ? ((Date.now()-startedAt)/1000).toFixed(1) + " s" : "—");
-  if (acc.length) {
-    html += row("accuracy 최소", `${Math.min(...acc).toFixed(2)} m`);
-    html += row("accuracy 평균", `${(acc.reduce((a,b)=>a+b,0)/acc.length).toFixed(2)} m`);
-    html += row("accuracy 최대", `${Math.max(...acc).toFixed(2)} m`);
-  }
-  if (alt.length) {
-    html += row("altitude 최소", `${Math.min(...alt).toFixed(2)} m`);
-    html += row("altitude 평균", `${(alt.reduce((a,b)=>a+b,0)/alt.length).toFixed(2)} m`);
-    html += row("altitude 최대", `${Math.max(...alt).toFixed(2)} m`);
-  }
-  if (spd.length) {
-    html += row("speed 최대", `${Math.max(...spd).toFixed(3)} m/s (${(Math.max(...spd)*3.6).toFixed(2)} km/h)`);
-  }
-  $("stats").innerHTML = html;
-}
-
-function distanceMeters(a,b) {
-  const R = 6371000;
-  const p1 = a.coords.latitude * Math.PI/180;
-  const p2 = b.coords.latitude * Math.PI/180;
-  const dp = (b.coords.latitude-a.coords.latitude)*Math.PI/180;
-  const dl = (b.coords.longitude-a.coords.longitude)*Math.PI/180;
-  const x = Math.sin(dp/2)**2 +
-            Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
-  return 2*R*Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
-}
-
-function addSample(pos) {
-  samples.push(pos);
-  if (samples.length > 10000) samples.shift();
-
-  if (lastPosition) {
-    const d = distanceMeters(lastPosition, pos);
-    const dt = (pos.timestamp-lastPosition.timestamp)/1000;
-    log(`위치 갱신: Δ거리 ${d.toFixed(2)} m / Δ시간 ${dt.toFixed(2)} s / accuracy ${pos.coords.accuracy?.toFixed(2)} m`);
-  } else {
-    log(`첫 위치 수신: accuracy ${pos.coords.accuracy?.toFixed(2)} m`);
-  }
-  lastPosition = pos;
-  renderPosition(pos);
-  renderStats();
-}
-
-function geoError(e) {
-  const names = {
-    1: "PERMISSION_DENIED — 위치 권한 거부",
-    2: "POSITION_UNAVAILABLE — 위치를 사용할 수 없음",
-    3: "TIMEOUT — 위치 획득 시간 초과"
-  };
-  log(`오류 ${e.code}: ${names[e.code] || "알 수 없는 오류"} / ${e.message}`);
-}
-
-function getOnce() {
-  if (!navigator.geolocation) {
-    log("이 브라우저는 Geolocation API를 지원하지 않습니다.");
-    return;
-  }
-  log("현재 위치 1회 측정 요청...");
-  navigator.geolocation.getCurrentPosition(
-    pos => {
-      addSample(pos);
-      log("1회 측정 완료");
-    },
-    geoError,
-    { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
-  );
-}
-
-function startWatch() {
-  if (watchId !== null) {
-    log("이미 연속 측정 중입니다.");
-    return;
-  }
-  samples = [];
-  lastPosition = null;
-  startedAt = Date.now();
-
-  if (!navigator.geolocation) {
-    log("이 브라우저는 Geolocation API를 지원하지 않습니다.");
-    return;
-  }
-
-  log("연속 측정 시작 — enableHighAccuracy=true, maximumAge=0");
-  watchId = navigator.geolocation.watchPosition(
-    addSample,
-    geoError,
-    { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
-  );
-}
-
-function stopWatch() {
-  if (watchId !== null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-    log(`연속 측정 중지 — 총 ${samples.length}개 샘플`);
-    renderStats();
-  } else {
-    log("현재 연속 측정 중이 아닙니다.");
-  }
-}
-
-function clearAll() {
-  samples = [];
-  lastPosition = null;
-  latestData = null;
-  startedAt = null;
-  $("position").innerHTML = row("상태", "측정 전");
-  $("stats").innerHTML = row("샘플 수", 0);
-  $("log").textContent = "";
-  log("화면 초기화");
-}
-
-$("once").onclick = getOnce;
-$("watch").onclick = startWatch;
-$("stop").onclick = stopWatch;
-$("clear").onclick = clearAll;
-
-$("copy").onclick = async () => {
-  if (!latestData) {
-    log("복사할 위치 데이터가 없습니다.");
-    return;
-  }
-  const text = JSON.stringify(latestData, null, 2);
-  try {
-    await navigator.clipboard.writeText(text);
-    log("현재 결과 JSON을 클립보드에 복사했습니다.");
-  } catch {
-    prompt("아래 JSON을 복사하세요.", text);
-  }
-};
-
-renderEnv();
-$("position").innerHTML = row("상태", "측정 전");
-$("stats").innerHTML = row("샘플 수", 0);
-log("페이지 로드 완료");
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active")}));
+$("startAll").onclick=startAll;$("stopAll").onclick=stopAll;$("onceGps").onclick=onceGPS;$("clearAll").onclick=clearAll;
+renderEnv();updateSupport();addLog("페이지 로드 완료");drawChart("accCanvas",[],"acc");drawChart("gyroCanvas",[],"gyro");
 </script>
 </body>
 </html>
