@@ -595,7 +595,7 @@
     }
     #roadview-status.hidden { display: none; }
 
-    /* ===== 라이딩 모드 시안 레이아웃 ===== */
+    /* ===== 라이딩 모드: 고정 영역 분할 ===== */
     #ride-mode {
       display: none;
       position: fixed;
@@ -605,52 +605,65 @@
       color: #e8e8e8;
       flex-direction: column;
       overflow: hidden;
-      font-size: 14px;
+      height: 100%;
+      height: 100dvh;
     }
     #ride-mode.open { display: flex; }
 
-    /* 탭 */
     #ride-mode .rm-tabs {
-      flex-shrink: 0;
+      flex: 0 0 44px;
       display: flex;
-      gap: 0;
-      padding: 0;
-      padding-top: max(0px, env(safe-area-inset-top));
       background: #141414;
       border-bottom: 1px solid #2a2a2a;
+      padding-top: env(safe-area-inset-top);
+      box-sizing: content-box;
     }
     #ride-mode .rm-tab {
       flex: 1;
-      padding: 12px 6px;
+      min-width: 0;
       border: none;
       background: transparent;
       color: #888;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      padding: 0 4px;
     }
     #ride-mode .rm-tab.active {
       color: #4a9eff;
       border-bottom-color: #4a9eff;
       background: rgba(74,158,255,0.06);
     }
-    #ride-mode .rm-tab.rm-tab-exit { color: #aaa; flex: 0.85; }
+    #ride-mode .rm-tab.rm-tab-exit { flex: 0.9; color: #999; }
 
-    /* 구간 전환 */
+    #ride-mode .rm-panel {
+      display: none;
+      flex: 1 1 auto;
+      min-height: 0;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #ride-mode .rm-panel.active { display: flex; }
+
     #ride-mode .rm-seg-nav {
-      flex-shrink: 0;
+      flex: 0 0 48px;
       display: flex;
       align-items: center;
       gap: 6px;
-      padding: 8px 10px;
+      padding: 0 8px;
       background: #161616;
       border-bottom: 1px solid #2a2a2a;
+      min-height: 0;
     }
     #ride-mode .rm-seg-nav button {
-      flex: 0 0 auto;
+      flex: 0 0 26%;
       max-width: 28%;
-      padding: 8px 6px;
+      height: 36px;
+      padding: 0 6px;
       border: 1px solid #333;
       border-radius: 8px;
       background: #222;
@@ -661,37 +674,43 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    #ride-mode .rm-seg-nav button:disabled { opacity: 0.35; cursor: default; }
-    #ride-mode .rm-seg-nav .rm-seg-cur {
+    #ride-mode .rm-seg-nav button:disabled { opacity: 0.35; }
+    #ride-mode .rm-seg-cur {
       flex: 1;
-      text-align: center;
-      font-weight: 700;
-      font-size: 14px;
-      color: #f0f0f0;
       min-width: 0;
-      padding: 0 4px;
+      text-align: center;
+      overflow: hidden;
+    }
+    #ride-mode .rm-seg-cur #rm-seg-name {
+      font-weight: 700;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #ride-mode .rm-status-line {
       font-size: 10px;
       color: #666;
-      text-align: center;
-      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #ride-mode .rm-status-line.ok { color: #4ade80; }
     #ride-mode .rm-status-line.warn { color: #fbbf24; }
     #ride-mode .rm-status-line.err { color: #f87171; }
 
-    /* 본문: 지도 | 통계 */
+    /* 중간: 지도 58% | 통계 42% — 높이 고정 비율 */
     #ride-mode .rm-mid {
-      flex: 1 1 auto;
+      flex: 1 1 0;
       min-height: 0;
       display: flex;
       flex-direction: row;
-      border-bottom: 1px solid #2a2a2a;
+      overflow: hidden;
     }
     #ride-mode .rm-map-pane {
-      flex: 1 1 55%;
+      flex: 1 1 0;
       min-width: 0;
+      min-height: 0;
       position: relative;
       background: #1a1a1a;
     }
@@ -700,131 +719,205 @@
       height: 100%;
     }
     #ride-mode .rm-map-placeholder {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #555;
-      font-size: 13px;
-      pointer-events: none;
+      display: none;
     }
     #ride-mode .rm-stats-pane {
-      flex: 0 0 42%;
-      max-width: 200px;
-      min-width: 140px;
+      flex: 0 0 38%;
+      max-width: 180px;
+      min-width: 120px;
+      min-height: 0;
+      overflow-x: hidden;
       overflow-y: auto;
-      padding: 10px 10px 8px;
+      padding: 8px 10px;
       background: #121212;
       border-left: 1px solid #2a2a2a;
     }
-    #ride-mode .rm-stat {
-      margin-bottom: 12px;
-    }
+    #ride-mode .rm-stat { margin-bottom: 10px; }
     #ride-mode .rm-stat label {
       display: block;
       font-size: 10px;
       color: #777;
-      margin-bottom: 2px;
-      letter-spacing: 0.02em;
+      margin-bottom: 1px;
     }
     #ride-mode .rm-stat .val {
-      font-size: 20px;
+      font-size: 18px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       color: #f2f2f2;
       line-height: 1.15;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #ride-mode .rm-stat .val small {
       font-size: 11px;
       font-weight: 500;
       color: #888;
-      margin-left: 2px;
     }
     #ride-mode .rm-ref {
-      margin-top: 8px;
-      padding-top: 10px;
+      margin-top: 6px;
+      padding-top: 8px;
       border-top: 1px solid #2a2a2a;
     }
     #ride-mode .rm-ref h4 {
       font-size: 10px;
       color: #8ab4f8;
-      margin-bottom: 8px;
-      font-weight: 600;
+      margin-bottom: 6px;
     }
     #ride-mode .rm-chip {
-      display: inline-block;
+      display: block;
       background: #1e1e1e;
       border: 1px solid #333;
       border-radius: 6px;
       padding: 5px 8px;
-      font-size: 12px;
-      margin: 0 4px 6px 0;
+      font-size: 11px;
+      margin-bottom: 5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     #ride-mode .rm-chip strong { color: #4a9eff; }
     #ride-mode .rm-chip.warn strong { color: #fbbf24; }
     #ride-mode .rm-chip.hr strong { color: #f472b6; }
 
-    /* 하단 차트 영역 */
+    /* 하단 차트: 고정 높이 */
     #ride-mode .rm-charts {
-      flex: 0 0 auto;
+      flex: 0 0 220px;
       display: flex;
       flex-direction: column;
       background: #0e0e0e;
       border-top: 1px solid #2a2a2a;
-      padding: 6px 8px 8px;
-      padding-bottom: max(8px, env(safe-area-inset-bottom));
+      padding: 4px 6px;
+      padding-bottom: max(4px, env(safe-area-inset-bottom));
+      min-height: 0;
+      overflow: hidden;
     }
     #ride-mode .rm-chart-label {
+      flex: 0 0 14px;
       font-size: 10px;
       color: #666;
-      margin-bottom: 2px;
-      padding-left: 2px;
+      line-height: 14px;
     }
     #ride-mode #rm-elev-wrap {
+      flex: 0 0 130px;
+      height: 130px;
+      min-height: 130px;
+      max-height: 130px;
       position: relative;
-      height: 100px;
     }
     #ride-mode #rm-elev-canvas {
       width: 100%;
       height: 100%;
       display: block;
-      background: #141414;
-      border-radius: 6px;
+      background: #1e1e1e;
+      border-radius: 4px;
     }
     #ride-mode #rm-mini-wrap {
+      flex: 0 0 28px;
+      height: 28px;
+      min-height: 28px;
       position: relative;
-      height: 36px;
-      margin-top: 6px;
+      margin-top: 2px;
     }
     #ride-mode #rm-mini-canvas {
       width: 100%;
       height: 100%;
       display: block;
-      background: #141414;
-      border-radius: 6px;
+      background: #1e1e1e;
+      border-radius: 4px;
     }
     #ride-mode .rm-mini-labels {
+      flex: 0 0 14px;
       display: flex;
       justify-content: space-between;
       font-size: 10px;
       color: #888;
-      margin-top: 2px;
       font-variant-numeric: tabular-nums;
+      line-height: 14px;
+    }
+    #ride-mode .rm-log-panel {
+      display: none;
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      max-height: 40%;
+      z-index: 20;
+      background: rgba(20,20,20,0.96);
+      border: 1px solid #444;
+      border-radius: 10px;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    }
+    #ride-mode .rm-log-panel.open {
+      display: flex;
+    }
+    #ride-mode .rm-log-panel header {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      border-bottom: 1px solid #333;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    #ride-mode .rm-log-panel header button {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    #ride-mode #rm-log-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 12px;
+      font-size: 11px;
+      font-family: ui-monospace, monospace;
+      color: #bbb;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
     }
 
-    /* 패널: 전체/설정 */
-    #ride-mode .rm-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
-    #ride-mode .rm-panel.active { display: flex; }
+    #ride-mode .rm-refresh-fab {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      z-index: 5;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: none;
+      background: #22c55e;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    #ride-mode .rm-refresh-fab.tracking {
+      background: #ef4444;
+    }
+    #ride-mode .rm-log-fab {
+      position: absolute;
+      right: 10px;
+      bottom: 66px;
+      z-index: 5;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 1px solid #555;
+      background: rgba(30,30,30,0.9);
+      color: #ccc;
+      font-size: 11px;
+      cursor: pointer;
+    }
     #ride-mode .rm-settings-body {
       padding: 16px;
       overflow-y: auto;
-    }
-    #ride-mode .rm-settings-body label {
-      display: block;
-      font-size: 12px;
-      color: #aaa;
-      margin-bottom: 6px;
     }
     #ride-mode .rm-settings-body select {
       width: 100%;
@@ -835,21 +928,6 @@
       border-radius: 8px;
       padding: 10px;
       margin-bottom: 16px;
-    }
-    #ride-mode .rm-refresh-fab {
-      position: absolute;
-      right: 10px;
-      bottom: 10px;
-      z-index: 5;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      border: none;
-      background: #4a9eff;
-      color: #fff;
-      font-size: 18px;
-      cursor: pointer;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
     }
 
   </style>
@@ -869,15 +947,14 @@
         <button type="button" id="rm-prev-seg" title="이전 구간">‹ <span id="rm-prev-label">이전</span></button>
         <div class="rm-seg-cur">
           <div id="rm-seg-name">—</div>
-          <div class="rm-status-line" id="rm-status">대기</div>
         </div>
         <button type="button" id="rm-next-seg" title="다음 구간"><span id="rm-next-label">다음</span> ›</button>
       </div>
       <div class="rm-mid">
         <div class="rm-map-pane">
           <div id="rm-map"></div>
-          <div class="rm-map-placeholder" id="rm-map-ph">지도 (현재 구간)</div>
-          <button type="button" class="rm-refresh-fab" id="rm-btn-refresh" title="위치 갱신">⌖</button>
+          <button type="button" class="rm-log-fab" id="rm-btn-log" title="GPS 로그">log</button>
+          <button type="button" class="rm-refresh-fab" id="rm-btn-start-track" title="감지 시작/중지">▶</button>
         </div>
         <div class="rm-stats-pane">
           <div class="rm-stat"><label>남은 거리</label><div class="val" id="rm-rem-dist">—<small>km</small></div></div>
@@ -912,7 +989,7 @@
       </div>
       <div class="rm-mid">
         <div class="rm-map-pane">
-          <div class="rm-map-placeholder">지도 (전체 경로) — 시안</div>
+          <div id="rm-map-course" style="width:100%;height:100%;"></div>
         </div>
         <div class="rm-stats-pane">
           <div class="rm-stat"><label>진행 거리</label><div class="val" id="rm-dist">—<small>km</small></div></div>
@@ -998,6 +1075,7 @@
         <div id="map"></div>
         <div id="map-controls">
           <button id="btn-export-gpx" title="구간·큐시트 포함 GPX 내보내기" style="display:none;">📤</button>
+          <button id="btn-copy-cuesheet" title="큐시트 텍스트 복사 (AI용)" style="display:none;">📋</button>
           <button id="btn-segments" title="구간 목록" style="display:none;">✂️</button>
           <button id="btn-waypoints" title="웨이포인트 목록" style="display:none;">📍</button>
           <button id="btn-ride-mode" title="라이딩 감지 모드" style="display:none;">🚴</button>
@@ -2775,7 +2853,9 @@
         }
       }
       if (exp) exp.style.display = has ? '' : 'none';
-      if (ride) ride.style.display = has ? '' : 'none'; // same as segments/export
+      const copyCs = $('#btn-copy-cuesheet');
+      if (copyCs) copyCs.style.display = has ? '' : 'none';
+      if (ride) ride.style.display = has ? '' : 'none';
     }
 
 
@@ -4349,9 +4429,15 @@
       intervalSec: 60,
       refreshing: false,
       tab: 'seg',
-      /** 수동 구간 인덱스 (null이면 GPS 구간 자동) */
       manualSegIndex: null,
-      autoSegIndex: null
+      autoSegIndex: null,
+      map: null,
+      mapReady: false,
+      polyline: null,
+      marker: null,
+      boundsFittedSeg: null,
+      tracking: false,
+      logs: []
     };
 
     function elevGainBetween(fromIdx, toIdx) {
@@ -4421,104 +4507,296 @@
     }
 
     function setRideStatus(msg, kind) {
-      const el = $('#rm-status');
-      if (!el) return;
-      el.textContent = msg;
-      el.className = 'rm-status' + (kind ? ' ' + kind : '');
+      appendRideLog(msg, kind);
     }
 
-        function drawRideElevCanvas(seg, atIdx) {
+    function appendRideLog(msg, kind) {
+      if (!msg) return;
+      const t = new Date();
+      const ts = String(t.getHours()).padStart(2,'0') + ':' + String(t.getMinutes()).padStart(2,'0') + ':' + String(t.getSeconds()).padStart(2,'0');
+      const line = '[' + ts + '] ' + msg;
+      rideState.logs.push(line);
+      if (rideState.logs.length > 200) rideState.logs.shift();
+      const body = $('#rm-log-body');
+      if (body) {
+        body.textContent = rideState.logs.join('\n');
+        body.scrollTop = body.scrollHeight;
+      }
+    }
+
+    function setTrackUi() {
+      const btn = $('#rm-btn-start-track');
+      if (btn) {
+        btn.textContent = rideState.tracking ? '■' : '▶';
+        btn.title = rideState.tracking ? '감지 중지' : '감지 시작 (권한 확인)';
+        btn.classList.toggle('tracking', !!rideState.tracking);
+      }
+    }
+
+    function requestGeoPermission() {
+      return new Promise((resolve) => {
+        if (!navigator.geolocation) {
+          resolve({ ok: false, err: '이 브라우저는 GPS를 지원하지 않습니다.' });
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ ok: true, pos }),
+          (err) => resolve({ ok: false, err: err.message || String(err.code) }),
+          { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+        );
+      });
+    }
+
+    async function toggleRideTracking() {
+      if (rideState.tracking) {
+        rideState.tracking = false;
+        clearRideInterval();
+        setTrackUi();
+        appendRideLog('감지 중지');
+        return;
+      }
+      appendRideLog('위치 권한 확인 중…');
+      const btn = $('#rm-btn-start-track');
+      if (btn) btn.disabled = true;
+      const res = await requestGeoPermission();
+      if (btn) btn.disabled = false;
+      if (!res.ok) {
+        appendRideLog('권한/GPS 실패: ' + res.err, 'err');
+        alert('위치 권한을 허용해야 감지 모드를 쓸 수 있습니다.\n' + res.err);
+        setTrackUi();
+        return;
+      }
+      rideState.tracking = true;
+      setTrackUi();
+      appendRideLog('감지 시작 (권한 OK)');
+      applyRideFix(res.pos.coords.latitude, res.pos.coords.longitude, res.pos.coords.accuracy);
+      setupRideInterval();
+    }
+
+
+    
+    function ensureRideMap() {
+      if (!window.kakao || !kakao.maps) {
+        setRideStatus('지도 API 없음', 'err');
+        return null;
+      }
+      const el = $('#rm-map');
+      if (!el) return null;
+      if (rideState.map) {
+        try { rideState.map.relayout(); } catch (_) {}
+        return rideState.map;
+      }
+      const center = state.currentGpx && state.currentGpx.points[0]
+        ? new kakao.maps.LatLng(state.currentGpx.points[0].lat, state.currentGpx.points[0].lon)
+        : new kakao.maps.LatLng(37.5665, 126.9780);
+      rideState.map = new kakao.maps.Map(el, {
+        center: center,
+        level: 5
+      });
+      rideState.mapReady = true;
+      setTimeout(() => {
+        try { rideState.map.relayout(); } catch (_) {}
+      }, 100);
+      return rideState.map;
+    }
+
+    function updateRideMapForSeg(seg, atPoint) {
+      const map = ensureRideMap();
+      if (!map || !seg || !state.currentGpx) return;
+      const points = state.currentGpx.points;
+      const path = [];
+      for (let i = seg.startIdx; i <= seg.endIdx; i++) {
+        if (points[i]) path.push(new kakao.maps.LatLng(points[i].lat, points[i].lon));
+      }
+      if (!path.length) return;
+
+      if (rideState.polyline) {
+        rideState.polyline.setPath(path);
+      } else {
+        rideState.polyline = new kakao.maps.Polyline({
+          path: path,
+          strokeWeight: 5,
+          strokeColor: '#4a9eff',
+          strokeOpacity: 0.9,
+          strokeStyle: 'solid',
+          map: map
+        });
+      }
+
+      // fit bounds to segment when segment changes
+      if (rideState.boundsFittedSeg !== seg.id) {
+        const bounds = new kakao.maps.LatLngBounds();
+        path.forEach(p => bounds.extend(p));
+        map.setBounds(bounds, 20, 20, 20, 20);
+        rideState.boundsFittedSeg = seg.id;
+        setTimeout(() => { try { map.relayout(); map.setBounds(bounds, 20, 20, 20, 20); } catch (_) {} }, 80);
+      }
+
+      if (atPoint) {
+        const pos = new kakao.maps.LatLng(atPoint.lat, atPoint.lon);
+        if (rideState.marker) {
+          rideState.marker.setPosition(pos);
+        } else {
+          rideState.marker = new kakao.maps.Marker({
+            position: pos,
+            map: map
+          });
+        }
+      }
+    }
+
+            function drawRideElevCanvas(seg, atIdx) {
       const canvas = $('#rm-elev-canvas');
       if (!canvas || !state.currentGpx || !seg) return;
+      const wrap = $('#rm-elev-wrap') || canvas.parentElement;
+      const rect = wrap.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      const W = Math.max(200, Math.floor(rect.width * dpr));
-      const H = Math.max(80, Math.floor(rect.height * dpr));
-      canvas.width = W;
-      canvas.height = H;
+      const Wcss = Math.max(100, rect.width);
+      const Hcss = Math.max(60, rect.height);
+      canvas.width = Wcss * dpr;
+      canvas.height = Hcss * dpr;
+      canvas.style.width = Wcss + 'px';
+      canvas.style.height = Hcss + 'px';
       const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const W = Wcss, H = Hcss;
       const points = state.currentGpx.points;
       const i0 = seg.startIdx, i1 = seg.endIdx;
       if (i1 <= i0) return;
+
+      const pad = { top: 10, right: 10, bottom: 18, left: 36 };
+      const cW = W - pad.left - pad.right;
+      const cH = H - pad.top - pad.bottom;
+
       let minE = Infinity, maxE = -Infinity, minI = i0, maxI = i0;
       for (let i = i0; i <= i1; i++) {
         const e = points[i].ele || 0;
         if (e < minE) { minE = e; minI = i; }
         if (e > maxE) { maxE = e; maxI = i; }
       }
-      if (maxE - minE < 1) maxE = minE + 1;
+      if (maxE < 50) maxE = 50;
+      maxE *= 1.05;
+      if (minE > 0) minE = Math.min(0, minE);
+
       const d0 = points[i0].dist, d1 = points[i1].dist;
-      const span = Math.max(0.001, d1 - d0);
-      const padL = 2 * dpr, padR = 2 * dpr, padT = 14 * dpr, padB = 16 * dpr;
-      const cW = W - padL - padR, cH = H - padT - padB;
-      const xAt = (dist) => padL + ((dist - d0) / span) * cW;
-      const yAt = (ele) => padT + cH - ((ele - minE) / (maxE - minE)) * cH;
+      const viewMin = d0, viewMax = d1;
+      const viewSpan = Math.max(0.001, viewMax - viewMin);
+      const toX = (dist) => pad.left + ((dist - viewMin) / viewSpan) * cW;
+      const toY = (ele) => pad.top + cH - ((ele - minE) / (maxE - minE || 1)) * cH;
 
-      // grid (light)
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(padL, yAt(minE)); ctx.lineTo(padL + cW, yAt(minE));
-      ctx.moveTo(padL, yAt(maxE)); ctx.lineTo(padL + cW, yAt(maxE));
-      ctx.stroke();
-
-      // profile
-      ctx.beginPath();
-      for (let i = i0; i <= i1; i++) {
-        const x = xAt(points[i].dist);
-        const y = yAt(points[i].ele || 0);
-        if (i === i0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.strokeStyle = '#4a9eff';
-      ctx.lineWidth = 2 * dpr;
-      ctx.stroke();
-      ctx.lineTo(xAt(d1), padT + cH);
-      ctx.lineTo(xAt(d0), padT + cH);
-      ctx.closePath();
-      ctx.fillStyle = 'rgba(74,158,255,0.12)';
-      ctx.fill();
-
-      // min/max markers
+      ctx.fillStyle = '#1e1e1e';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#333';
       ctx.fillStyle = '#888';
-      ctx.font = (9 * dpr) + 'px sans-serif';
-      const mark = (idx, label) => {
-        const x = xAt(points[idx].dist);
-        const y = yAt(points[idx].ele || 0);
-        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+      ctx.font = '10px sans-serif';
+      ctx.lineWidth = 1;
+      for (let s = 0; s <= 3; s++) {
+        const ele = minE + (maxE - minE) * (s / 3);
+        const y = toY(ele);
         ctx.beginPath();
-        ctx.moveTo(x, padT);
-        ctx.lineTo(x, padT + cH);
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(pad.left + cW, y);
         ctx.stroke();
-        ctx.fillStyle = '#aaa';
-        ctx.fillText(label, Math.min(x + 3 * dpr, W - 40 * dpr), y - 3 * dpr);
-      };
-      mark(minI, '↓' + Math.round(minE));
-      if (maxI !== minI) mark(maxI, '↑' + Math.round(maxE));
+        ctx.textAlign = 'right';
+        ctx.fillText(Math.round(ele) + 'm', pad.left - 4, y + 3);
+      }
 
-      // start / end labels
+      const style = state.settings.gradeStyle || 'line';
+      const segPoints = points.slice(i0, i1 + 1);
+      const gradeData = prepareGradeData(
+        segPoints,
+        state.settings.resampleDist,
+        state.settings.smoothWindow,
+        state.settings.gradeWindow
+      );
+
+      if (style === 'area' || style === 'both') {
+        if (gradeData.length > 1) {
+          const yBase = pad.top + cH;
+          const xL = Math.floor(pad.left);
+          const xR = Math.ceil(pad.left + cW);
+          let j = 0;
+          for (let x = xL; x < xR; x++) {
+            const dist = viewMin + ((x - pad.left + 0.5) / cW) * viewSpan;
+            while (j < gradeData.length - 2 && gradeData[j + 1].dist < dist) j++;
+            const a = gradeData[j];
+            const b = gradeData[Math.min(j + 1, gradeData.length - 1)];
+            const span = (b.dist - a.dist) || 1e-9;
+            const u = Math.max(0, Math.min(1, (dist - a.dist) / span));
+            const ele = a.ele + (b.ele - a.ele) * u;
+            const grade = b.grade;
+            const y = toY(ele);
+            const h = yBase - y;
+            if (h <= 0) continue;
+            ctx.fillStyle = gradeToColor(grade, state.settings.areaColorMode, true);
+            ctx.fillRect(x, y, 1, h);
+          }
+        }
+      }
+
+      if (style === 'line' || style === 'both' || style === 'area') {
+        // line on top for line/both; for area still optional outline
+        if (style === 'line' || style === 'both') {
+          if (gradeData.length >= 2) {
+            for (let i = 1; i < gradeData.length; i++) {
+              const a = gradeData[i - 1], b = gradeData[i];
+              ctx.strokeStyle = gradeToColor(b.grade != null ? b.grade : 0);
+              ctx.lineWidth = 2.5;
+              ctx.beginPath();
+              ctx.moveTo(toX(a.dist), toY(a.ele));
+              ctx.lineTo(toX(b.dist), toY(b.ele));
+              ctx.stroke();
+            }
+          } else if (segPoints.length > 1) {
+            ctx.beginPath();
+            segPoints.forEach((p, i) => {
+              const x = toX(p.dist), y = toY(p.ele || 0);
+              if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            });
+            ctx.strokeStyle = '#4a9eff';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+          }
+        }
+      }
+
+      // min/max
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)';
       ctx.fillStyle = '#999';
-      ctx.font = (9 * dpr) + 'px sans-serif';
-      ctx.fillText(d0.toFixed(1) + '·' + Math.round(points[i0].ele || 0) + 'm', padL, H - 3 * dpr);
-      const endLab = d1.toFixed(1) + '·' + Math.round(points[i1].ele || 0) + 'm';
-      ctx.fillText(endLab, W - padR - ctx.measureText(endLab).width, H - 3 * dpr);
-
-      // current position
-      if (atIdx != null && atIdx >= i0 && atIdx <= i1) {
-        const x = xAt(points[atIdx].dist);
-        const y = yAt(points[atIdx].ele || 0);
-        ctx.strokeStyle = 'rgba(248,113,113,0.7)';
-        ctx.lineWidth = 1.5 * dpr;
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'left';
+      [[minI, '↓' + Math.round(points[minI].ele || 0)], [maxI, '↑' + Math.round(points[maxI].ele || 0)]].forEach(([idx, lab]) => {
+        const x = toX(points[idx].dist);
         ctx.beginPath();
-        ctx.moveTo(x, padT);
-        ctx.lineTo(x, padT + cH);
+        ctx.moveTo(x, pad.top);
+        ctx.lineTo(x, pad.top + cH);
+        ctx.stroke();
+        ctx.fillText(lab, Math.min(x + 2, W - 36), toY(points[idx].ele || 0) - 2);
+      });
+
+      ctx.fillStyle = '#888';
+      ctx.font = '9px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(d0.toFixed(1) + 'km ' + Math.round(points[i0].ele || 0) + 'm', pad.left, H - 4);
+      ctx.textAlign = 'right';
+      ctx.fillText(d1.toFixed(1) + 'km ' + Math.round(points[i1].ele || 0) + 'm', pad.left + cW, H - 4);
+
+      if (atIdx != null && atIdx >= i0 && atIdx <= i1) {
+        const x = toX(points[atIdx].dist);
+        const y = toY(points[atIdx].ele || 0);
+        ctx.strokeStyle = 'rgba(248,113,113,0.75)';
+        ctx.beginPath();
+        ctx.moveTo(x, pad.top);
+        ctx.lineTo(x, pad.top + cH);
         ctx.stroke();
         ctx.fillStyle = '#f87171';
         ctx.beginPath();
-        ctx.arc(x, y, 4 * dpr, 0, Math.PI * 2);
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
         ctx.fill();
       }
     }
+
+
 
     function drawRideMinimap(atDist, seg) {
       const canvas = $('#rm-mini-canvas');
@@ -4628,6 +4906,7 @@
       updateRideSegNav();
       drawRideElevCanvas(seg, seg.startIdx);
       drawRideMinimap(seg.startDist, seg);
+      updateRideMapForSeg(seg, state.currentGpx.points[seg.startIdx]);
       const chips = [];
       if (seg.targetPower != null) chips.push('<span class="rm-chip">목표 파워 <strong>' + seg.targetPower + ' W</strong></span>');
       if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 <strong>' + seg.limitPower + ' W</strong></span>');
@@ -4727,6 +5006,7 @@
 
         drawRideElevCanvas(seg, inThis ? near.index : null);
         drawRideMinimap(pt.dist, seg);
+        updateRideMapForSeg(seg, inThis ? pt : state.currentGpx.points[seg.startIdx]);
       }
 
       const off = near.offRouteKm > 0.08;
@@ -4745,7 +5025,7 @@
     }
 
     function refreshRidePosition() {
-      if (!rideState.active || rideState.refreshing) return;
+      if (!rideState.active || !rideState.tracking || rideState.refreshing) return;
       if (!navigator.geolocation) {
         setRideStatus('GPS 미지원', 'err');
         return;
@@ -4781,7 +5061,7 @@
       const sel = $('#rm-interval');
       const sec = sel ? Number(sel.value) : 60;
       rideState.intervalSec = isNaN(sec) ? 0 : sec;
-      if (rideState.intervalSec > 0 && rideState.active) {
+      if (rideState.intervalSec > 0 && rideState.active && rideState.tracking) {
         rideState.intervalId = setInterval(() => {
           if (document.visibilityState === 'visible') refreshRidePosition();
         }, rideState.intervalSec * 1000);
@@ -4803,14 +5083,33 @@
       }
       setRideTab('seg');
       updateRideSegNav();
-      applyRideSegOnly(0);
-      setupRideInterval();
-      refreshRidePosition();
+      rideState.tracking = false;
+      setTrackUi();
+      clearRideInterval();
+      requestAnimationFrame(() => {
+        ensureRideMap();
+        applyRideSegOnly(0);
+        setTimeout(() => {
+          if (rideState.map) {
+            try { rideState.map.relayout(); } catch (_) {}
+            rideState.boundsFittedSeg = null;
+            const seg = state.segments[getRideSegIndex()];
+            if (seg) updateRideMapForSeg(seg, state.currentGpx.points[seg.startIdx]);
+          }
+          const s = state.segments[getRideSegIndex()];
+          if (s) {
+            drawRideElevCanvas(s, s.startIdx);
+            drawRideMinimap(s.startDist, s);
+          }
+        }, 150);
+      });
     }
 
     function closeRideMode() {
       rideState.active = false;
+      rideState.tracking = false;
       clearRideInterval();
+      setTrackUi();
       const el = $('#ride-mode');
       if (el) {
         el.classList.remove('open');
@@ -4826,6 +5125,168 @@
     }
 
 
+
+        function formatDurationVisible(sec) {
+      if (sec == null || isNaN(sec)) return '';
+      const min = sec / 60;
+      if (Math.abs(min - Math.round(min)) < 1e-6) return String(Math.round(min));
+      return (Math.round(min * 10) / 10).toString();
+    }
+
+    /** 화면에 보이는 큐시트와 같은 표 (지점/구간/휴식 행 순서) */
+    function buildCuesheetTableText() {
+      if (!state.currentGpx || !state.segments.length || !state.nodes.length) return '';
+      const points = state.currentGpx.points;
+      const nodes = state.nodes;
+      const segs = state.segments;
+      const g = state.currentGpx;
+
+      const elevAt = (pointIdx, dist) => {
+        if (points[pointIdx]) return Math.round(points[pointIdx].ele || 0);
+        const p = findPointNearDist(points, dist);
+        return p ? Math.round(p.ele || 0) : 0;
+      };
+      const segStats = (seg) => {
+        const d = Math.max(0, (seg.endDist || 0) - (seg.startDist || 0));
+        let elevGain = 0;
+        let elevDiff = 0;
+        if (points.length) {
+          const a = points[seg.startIdx] || findPointNearDist(points, seg.startDist);
+          const b = points[seg.endIdx] || findPointNearDist(points, seg.endDist);
+          elevDiff = Math.round((b && b.ele || 0) - (a && a.ele || 0));
+          const i0 = seg.startIdx, i1 = seg.endIdx;
+          for (let i = i0 + 1; i <= i1; i++) {
+            const dd = (points[i].ele || 0) - (points[i - 1].ele || 0);
+            if (dd > 0) elevGain += dd;
+          }
+        }
+        let speed = null;
+        if (seg.targetDurationSec > 0 && d > 0) {
+          speed = d / (seg.targetDurationSec / 3600);
+        }
+        return { distance: d, elevGain, elevDiff, speed };
+      };
+
+      let cumMin = 0;
+      let hasSchedule = false;
+      const headers = ['#', '이름', '거리(km)', '고도(m)', '이동거리', '고도차', '획고', '목표시간(분)', '시각', '목표속력', '목표파워', '제한파워', '목표심박', '제한심박', '비고'];
+      const lines = [];
+      lines.push('# ' + (g.name || 'route') + ' 큐시트');
+      lines.push((g.totalDistance || 0).toFixed(1) + ' km · 획고 ' + Math.round(g.elevationGain || 0) + ' m · 출발 ' + (state.planStartTime || '—'));
+      lines.push('');
+      lines.push('| ' + headers.join(' | ') + ' |');
+      lines.push('| ' + headers.map(() => '---').join(' | ') + ' |');
+
+      const cell = (v) => {
+        if (v == null || v === '') return ' ';
+        return String(v).replace(/\|/g, '/').replace(/\n/g, ' ');
+      };
+
+      nodes.forEach((node, ni) => {
+        const isStart = node.role === 'start' || ni === 0;
+        const isEnd = node.role === 'end' || ni === nodes.length - 1;
+        const segOut = !isEnd ? segs[ni] : null;
+        const segIn = ni > 0 ? segs[ni - 1] : null;
+
+        if (isStart && state.planStartTime) hasSchedule = true;
+
+        // rest row before node (except start) — as shown in UI after previous segment
+        // UI order: node, then rest of incoming, then outgoing seg — actually rest after arrival at node
+        // From renderSegTable: node first, then if rest on segIn, rest row, then if segOut, seg row
+        // Wait: looking at code - rest is after node when segIn has rest. Let me follow render order.
+
+        const arrivalClock = isStart
+          ? (state.planStartTime || '00:00')
+          : (hasSchedule ? formatClockFromMinutes(cumMin) : '');
+
+        // node row
+        lines.push('| ' + [
+          ni + 1,
+          node.name || '',
+          (node.dist != null ? Number(node.dist).toFixed(1) : ''),
+          elevAt(node.pointIdx, node.dist),
+          '', '', '', '',
+          arrivalClock,
+          '', '', '', '', '',
+          ''
+        ].map(cell).join(' | ') + ' |');
+
+        // rest after arriving at this node (segIn.restAfter)
+        if (segIn && segIn.restAfterSec > 0) {
+          const restMin = segIn.restAfterSec / 60;
+          cumMin += restMin;
+          hasSchedule = true;
+          const restEnd = formatClockFromMinutes(cumMin);
+          lines.push('| ' + [
+            '',
+            '☕ 휴식',
+            '', '', '', '', '',
+            String(Math.round(restMin)),
+            restEnd,
+            '', '', '', '', '',
+            ''
+          ].map(cell).join(' | ') + ' |');
+        }
+
+        // segment row out
+        if (segOut) {
+          const st = segStats(segOut);
+          const elevDiffStr = (st.elevDiff > 0 ? '+' : '') + st.elevDiff;
+          let durVal = '';
+          if (segOut.targetDurationSec != null) {
+            durVal = formatDurationVisible(segOut.targetDurationSec);
+            cumMin += segOut.targetDurationSec / 60;
+            hasSchedule = true;
+          }
+          const speedStr = st.speed != null ? st.speed.toFixed(1) : '';
+          const half = (ni + 0.5);
+          lines.push('| ' + [
+            half,
+            '',
+            '',
+            '',
+            st.distance.toFixed(1),
+            elevDiffStr,
+            Math.round(st.elevGain),
+            durVal,
+            '',
+            speedStr,
+            segOut.targetPower != null ? segOut.targetPower : '',
+            segOut.limitPower != null ? segOut.limitPower : '',
+            segOut.targetHr != null ? segOut.targetHr : '',
+            segOut.limitHr != null ? segOut.limitHr : '',
+            segOut.note || ''
+          ].map(cell).join(' | ') + ' |');
+        }
+      });
+
+      return lines.join('\n');
+    }
+
+    async function copyCuesheetToClipboard() {
+      if (!state.currentGpx || !state.segments.length) {
+        alert('복사할 큐시트가 없습니다.');
+        return;
+      }
+      const md = buildCuesheetTableText();
+      try {
+        await navigator.clipboard.writeText(md);
+        alert('큐시트 표를 클립보드에 복사했습니다.');
+      } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = md;
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          document.execCommand('copy');
+          alert('큐시트 표를 클립보드에 복사했습니다.');
+        } catch (e2) {
+          alert('복사 실패');
+        }
+        document.body.removeChild(ta);
+      }
+    }
+
     function bindEvents() {
       $('#btn-settings').addEventListener('click', () => openModal('settings-modal'));
       $('#btn-history').addEventListener('click', () => { openModal('history-modal'); renderHistoryList(); });
@@ -4836,7 +5297,22 @@
       $('#btn-add-node')?.addEventListener('click', promptAddNode);
       $('#btn-ride-mode')?.addEventListener('click', openRideMode);
       
-      $('#rm-btn-refresh')?.addEventListener('click', refreshRidePosition);
+      $('#rm-btn-start-track')?.addEventListener('click', () => {
+        if (rideState.tracking) {
+          // 감지 중이면 한 번 수동 갱신 또는 중지? → 토글 중지/시작만 FAB
+          toggleRideTracking();
+        } else {
+          toggleRideTracking();
+        }
+      });
+      $('#rm-btn-log')?.addEventListener('click', () => {
+        const p = $('#rm-log-panel');
+        if (p) p.classList.toggle('open');
+      });
+      $('#rm-log-close')?.addEventListener('click', () => {
+        $('#rm-log-panel')?.classList.remove('open');
+      });
+      $('#btn-copy-cuesheet')?.addEventListener('click', copyCuesheetToClipboard);
       $$('#ride-mode .rm-tab').forEach(btn => {
         btn.addEventListener('click', () => setRideTab(btn.dataset.rmTab));
       });
