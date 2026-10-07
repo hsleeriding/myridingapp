@@ -595,214 +595,358 @@
     }
     #roadview-status.hidden { display: none; }
 
-    /* ===== 라이딩(감지) 모드 ===== */
+    /* ===== 라이딩 모드 시안 레이아웃 ===== */
     #ride-mode {
       display: none;
       position: fixed;
       inset: 0;
       z-index: 5000;
-      background: #0d0d0d;
+      background: #0c0c0c;
       color: #e8e8e8;
       flex-direction: column;
       overflow: hidden;
+      font-size: 14px;
     }
     #ride-mode.open { display: flex; }
-    #ride-mode .rm-top {
+
+    /* 탭 */
+    #ride-mode .rm-tabs {
       flex-shrink: 0;
-      padding: 10px 14px 8px;
-      padding-top: max(10px, env(safe-area-inset-top));
+      display: flex;
+      gap: 0;
+      padding: 0;
+      padding-top: max(0px, env(safe-area-inset-top));
+      background: #141414;
       border-bottom: 1px solid #2a2a2a;
+    }
+    #ride-mode .rm-tab {
+      flex: 1;
+      padding: 12px 6px;
+      border: none;
+      background: transparent;
+      color: #888;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    #ride-mode .rm-tab.active {
+      color: #4a9eff;
+      border-bottom-color: #4a9eff;
+      background: rgba(74,158,255,0.06);
+    }
+    #ride-mode .rm-tab.rm-tab-exit { color: #aaa; flex: 0.85; }
+
+    /* 구간 전환 */
+    #ride-mode .rm-seg-nav {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 6px;
+      padding: 8px 10px;
+      background: #161616;
+      border-bottom: 1px solid #2a2a2a;
     }
-    #ride-mode .rm-title { font-weight: 700; font-size: 15px; flex: 1; }
-    #ride-mode .rm-status { font-size: 11px; color: #888; text-align: right; }
-    #ride-mode .rm-status.ok { color: #4ade80; }
-    #ride-mode .rm-status.warn { color: #fbbf24; }
-    #ride-mode .rm-status.err { color: #f87171; }
-    #ride-mode .rm-body {
+    #ride-mode .rm-seg-nav button {
+      flex: 0 0 auto;
+      max-width: 28%;
+      padding: 8px 6px;
+      border: 1px solid #333;
+      border-radius: 8px;
+      background: #222;
+      color: #bbb;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #ride-mode .rm-seg-nav button:disabled { opacity: 0.35; cursor: default; }
+    #ride-mode .rm-seg-nav .rm-seg-cur {
       flex: 1;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding: 12px 14px 20px;
-      padding-bottom: max(20px, env(safe-area-inset-bottom));
+      text-align: center;
+      font-weight: 700;
+      font-size: 14px;
+      color: #f0f0f0;
+      min-width: 0;
+      padding: 0 4px;
     }
-    #ride-mode .rm-card {
+    #ride-mode .rm-status-line {
+      font-size: 10px;
+      color: #666;
+      text-align: center;
+      margin-top: 2px;
+    }
+    #ride-mode .rm-status-line.ok { color: #4ade80; }
+    #ride-mode .rm-status-line.warn { color: #fbbf24; }
+    #ride-mode .rm-status-line.err { color: #f87171; }
+
+    /* 본문: 지도 | 통계 */
+    #ride-mode .rm-mid {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      flex-direction: row;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    #ride-mode .rm-map-pane {
+      flex: 1 1 55%;
+      min-width: 0;
+      position: relative;
       background: #1a1a1a;
-      border: 1px solid #2e2e2e;
-      border-radius: 12px;
-      padding: 12px 14px;
+    }
+    #ride-mode #rm-map {
+      width: 100%;
+      height: 100%;
+    }
+    #ride-mode .rm-map-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #555;
+      font-size: 13px;
+      pointer-events: none;
+    }
+    #ride-mode .rm-stats-pane {
+      flex: 0 0 42%;
+      max-width: 200px;
+      min-width: 140px;
+      overflow-y: auto;
+      padding: 10px 10px 8px;
+      background: #121212;
+      border-left: 1px solid #2a2a2a;
+    }
+    #ride-mode .rm-stat {
       margin-bottom: 12px;
     }
-    #ride-mode .rm-card h3 {
-      margin: 0 0 10px;
-      font-size: 12px;
-      color: #8ab4f8;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-    }
-    #ride-mode .rm-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px 12px;
-    }
-    #ride-mode .rm-metric label {
+    #ride-mode .rm-stat label {
       display: block;
       font-size: 10px;
       color: #777;
       margin-bottom: 2px;
+      letter-spacing: 0.02em;
     }
-    #ride-mode .rm-metric .val {
+    #ride-mode .rm-stat .val {
       font-size: 20px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
-      color: #f0f0f0;
-      line-height: 1.2;
+      color: #f2f2f2;
+      line-height: 1.15;
     }
-    #ride-mode .rm-metric .val small {
-      font-size: 12px;
+    #ride-mode .rm-stat .val small {
+      font-size: 11px;
       font-weight: 500;
-      color: #999;
+      color: #888;
       margin-left: 2px;
     }
-    #ride-mode .rm-seg-name {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    #ride-mode .rm-progress {
-      height: 8px;
-      background: #2a2a2a;
-      border-radius: 4px;
-      overflow: hidden;
-      margin: 8px 0 12px;
-    }
-    #ride-mode .rm-progress > span {
-      display: block;
-      height: 100%;
-      background: linear-gradient(90deg, #4a9eff, #22c55e);
-      border-radius: 4px;
-      width: 0%;
-      transition: width 0.35s ease;
-    }
-    #ride-mode .rm-targets {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+    #ride-mode .rm-ref {
       margin-top: 8px;
+      padding-top: 10px;
+      border-top: 1px solid #2a2a2a;
+    }
+    #ride-mode .rm-ref h4 {
+      font-size: 10px;
+      color: #8ab4f8;
+      margin-bottom: 8px;
+      font-weight: 600;
     }
     #ride-mode .rm-chip {
-      background: #222;
-      border: 1px solid #3a3a3a;
-      border-radius: 8px;
-      padding: 6px 10px;
-      font-size: 13px;
+      display: inline-block;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      border-radius: 6px;
+      padding: 5px 8px;
+      font-size: 12px;
+      margin: 0 4px 6px 0;
     }
     #ride-mode .rm-chip strong { color: #4a9eff; }
     #ride-mode .rm-chip.warn strong { color: #fbbf24; }
     #ride-mode .rm-chip.hr strong { color: #f472b6; }
-    #ride-mode canvas.rm-elev {
-      width: 100%;
-      height: 72px;
-      display: block;
-      background: #111;
-      border-radius: 8px;
-      margin-top: 8px;
-    }
-    #ride-mode .rm-actions {
-      flex-shrink: 0;
+
+    /* 하단 차트 영역 */
+    #ride-mode .rm-charts {
+      flex: 0 0 auto;
       display: flex;
-      gap: 8px;
-      padding: 10px 14px;
-      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      flex-direction: column;
+      background: #0e0e0e;
       border-top: 1px solid #2a2a2a;
+      padding: 6px 8px 8px;
+      padding-bottom: max(8px, env(safe-area-inset-bottom));
+    }
+    #ride-mode .rm-chart-label {
+      font-size: 10px;
+      color: #666;
+      margin-bottom: 2px;
+      padding-left: 2px;
+    }
+    #ride-mode #rm-elev-wrap {
+      position: relative;
+      height: 100px;
+    }
+    #ride-mode #rm-elev-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
       background: #141414;
+      border-radius: 6px;
     }
-    #ride-mode .rm-actions button {
-      flex: 1;
-      padding: 14px 8px;
-      border: none;
-      border-radius: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
+    #ride-mode #rm-mini-wrap {
+      position: relative;
+      height: 36px;
+      margin-top: 6px;
     }
-    #ride-mode #rm-btn-refresh { background: #4a9eff; color: #fff; }
-    #ride-mode #rm-btn-exit { background: #2a2a2a; color: #ccc; flex: 0.55; }
-    #ride-mode .rm-interval {
+    #ride-mode #rm-mini-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #141414;
+      border-radius: 6px;
+    }
+    #ride-mode .rm-mini-labels {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-top: 8px;
-      font-size: 12px;
-      color: #999;
+      justify-content: space-between;
+      font-size: 10px;
+      color: #888;
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
     }
-    #ride-mode .rm-interval select {
+
+    /* 패널: 전체/설정 */
+    #ride-mode .rm-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+    #ride-mode .rm-panel.active { display: flex; }
+    #ride-mode .rm-settings-body {
+      padding: 16px;
+      overflow-y: auto;
+    }
+    #ride-mode .rm-settings-body label {
+      display: block;
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+    #ride-mode .rm-settings-body select {
+      width: 100%;
+      max-width: 240px;
       background: #222;
       color: #eee;
       border: 1px solid #444;
-      border-radius: 6px;
-      padding: 4px 8px;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 16px;
     }
-    #ride-mode .rm-off-route { color: #fbbf24; font-size: 13px; margin-top: 6px; }
+    #ride-mode .rm-refresh-fab {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      z-index: 5;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      border: none;
+      background: #4a9eff;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
 
   </style>
 </head>
 <body>
   
-  <div id="ride-mode" aria-hidden="true">
-    <div class="rm-top">
-      <div class="rm-title">라이딩 감지</div>
-      <div class="rm-status" id="rm-status">대기</div>
+    <div id="ride-mode" aria-hidden="true">
+    <div class="rm-tabs" role="tablist">
+      <button type="button" class="rm-tab active" data-rm-tab="seg">현재구간</button>
+      <button type="button" class="rm-tab" data-rm-tab="course">전체코스</button>
+      <button type="button" class="rm-tab" data-rm-tab="settings">설정</button>
+      <button type="button" class="rm-tab rm-tab-exit" data-rm-tab="exit">분석으로</button>
     </div>
-    <div class="rm-body">
-      <div class="rm-card">
-        <h3>전체 코스</h3>
-        <div class="rm-grid">
-          <div class="rm-metric"><label>진행 거리</label><div class="val" id="rm-dist">—<small>km</small></div></div>
-          <div class="rm-metric"><label>현재 고도</label><div class="val" id="rm-ele">—<small>m</small></div></div>
-          <div class="rm-metric"><label>남은 획고</label><div class="val" id="rm-rem-gain">—<small>m</small></div></div>
-          <div class="rm-metric"><label>남은 거리</label><div class="val" id="rm-rem-dist">—<small>km</small></div></div>
+
+    <div class="rm-panel active" id="rm-panel-seg" data-panel="seg">
+      <div class="rm-seg-nav">
+        <button type="button" id="rm-prev-seg" title="이전 구간">‹ <span id="rm-prev-label">이전</span></button>
+        <div class="rm-seg-cur">
+          <div id="rm-seg-name">—</div>
+          <div class="rm-status-line" id="rm-status">대기</div>
         </div>
-        <div class="rm-progress"><span id="rm-course-prog"></span></div>
+        <button type="button" id="rm-next-seg" title="다음 구간"><span id="rm-next-label">다음</span> ›</button>
       </div>
-      <div class="rm-card">
-        <h3>현재 구간</h3>
-        <div class="rm-seg-name" id="rm-seg-name">—</div>
-        <div class="rm-progress"><span id="rm-seg-prog"></span></div>
-        <div class="rm-grid">
-          <div class="rm-metric"><label>구간 위치</label><div class="val" id="rm-seg-pos">—</div></div>
-          <div class="rm-metric"><label>구간 남은 획고</label><div class="val" id="rm-seg-gain">—<small>m</small></div></div>
-          <div class="rm-metric"><label>남은 시간</label><div class="val" id="rm-seg-rem-time">—</div></div>
-          <div class="rm-metric"><label>목표 도착</label><div class="val" id="rm-seg-eta">—</div></div>
+      <div class="rm-mid">
+        <div class="rm-map-pane">
+          <div id="rm-map"></div>
+          <div class="rm-map-placeholder" id="rm-map-ph">지도 (현재 구간)</div>
+          <button type="button" class="rm-refresh-fab" id="rm-btn-refresh" title="위치 갱신">⌖</button>
         </div>
-        <div class="rm-targets" id="rm-targets"></div>
-        <canvas class="rm-elev" id="rm-elev-canvas" width="400" height="72"></canvas>
-        <div class="rm-off-route" id="rm-off-route" style="display:none;"></div>
+        <div class="rm-stats-pane">
+          <div class="rm-stat"><label>남은 거리</label><div class="val" id="rm-rem-dist">—<small>km</small></div></div>
+          <div class="rm-stat"><label>남은 획고</label><div class="val" id="rm-seg-gain">—<small>m</small></div></div>
+          <div class="rm-stat"><label>남은 목표시간</label><div class="val" id="rm-seg-rem-time">—</div></div>
+          <div class="rm-stat"><label>남은 순경사</label><div class="val" id="rm-grade">—<small>%</small></div></div>
+          <div class="rm-stat"><label>목표 도착</label><div class="val" id="rm-seg-eta">—</div></div>
+          <div class="rm-ref">
+            <h4>참고</h4>
+            <div id="rm-targets"></div>
+          </div>
+        </div>
       </div>
-      <div class="rm-card">
-        <h3>갱신 설정</h3>
-        <div class="rm-interval">
-          <span>자동 주기</span>
-          <select id="rm-interval">
-            <option value="0">수동만</option>
-            <option value="30">30초</option>
-            <option value="60" selected>1분</option>
-            <option value="120">2분</option>
-            <option value="300">5분</option>
-          </select>
+      <div class="rm-charts">
+        <div class="rm-chart-label">현재 구간 고도</div>
+        <div id="rm-elev-wrap"><canvas id="rm-elev-canvas" width="800" height="100"></canvas></div>
+        <div class="rm-chart-label" style="margin-top:6px;">전체 코스</div>
+        <div id="rm-mini-wrap"><canvas id="rm-mini-canvas" width="800" height="36"></canvas></div>
+        <div class="rm-mini-labels">
+          <span id="rm-mini-cur">— km</span>
+          <span id="rm-mini-end">— km</span>
         </div>
-        <p style="margin-top:8px;color:#666;font-size:11px;line-height:1.4;">
-          화면이 다시 보일 때 · 수동 새로고침 · 설정한 주기에만 GPS를 읽습니다. 운동 기록이 아닙니다.
+      </div>
+    </div>
+
+    <div class="rm-panel" id="rm-panel-course" data-panel="course">
+      <div class="rm-seg-nav">
+        <div class="rm-seg-cur" style="flex:1;">
+          <div id="rm-course-title">전체 코스</div>
+          <div class="rm-status-line" id="rm-status-course">—</div>
+        </div>
+      </div>
+      <div class="rm-mid">
+        <div class="rm-map-pane">
+          <div class="rm-map-placeholder">지도 (전체 경로) — 시안</div>
+        </div>
+        <div class="rm-stats-pane">
+          <div class="rm-stat"><label>진행 거리</label><div class="val" id="rm-dist">—<small>km</small></div></div>
+          <div class="rm-stat"><label>현재 고도</label><div class="val" id="rm-ele">—<small>m</small></div></div>
+          <div class="rm-stat"><label>남은 거리</label><div class="val" id="rm-course-rem-dist">—<small>km</small></div></div>
+          <div class="rm-stat"><label>남은 획고</label><div class="val" id="rm-rem-gain">—<small>m</small></div></div>
+          <div class="rm-stat"><label>코스 진행</label><div class="val" id="rm-course-pct">—<small>%</small></div></div>
+        </div>
+      </div>
+      <div class="rm-charts">
+        <div class="rm-chart-label">전체 고도 (시안 — 구간 탭과 동일 미니맵 영역)</div>
+        <div id="rm-mini-wrap-course" style="height:80px;background:#141414;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#555;font-size:12px;">전체 고도 차트 영역</div>
+      </div>
+    </div>
+
+    <div class="rm-panel" id="rm-panel-settings" data-panel="settings">
+      <div class="rm-settings-body">
+        <label for="rm-interval">위치 자동 갱신 주기</label>
+        <select id="rm-interval">
+          <option value="0">수동만</option>
+          <option value="30">30초</option>
+          <option value="60" selected>1분</option>
+          <option value="120">2분</option>
+          <option value="300">5분</option>
+        </select>
+        <p style="color:#666;font-size:12px;line-height:1.5;">
+          화면이 다시 보일 때 · 수동(지도 ⌖) · 설정 주기에만 GPS를 읽습니다.<br>
+          운동 기록용이 아닙니다.
         </p>
       </div>
     </div>
-    <div class="rm-actions">
-      <button type="button" id="rm-btn-exit">분석으로</button>
-      <button type="button" id="rm-btn-refresh">위치 갱신</button>
-    </div>
   </div>
+
+
 
   <div id="app">
     <div id="main-row">
@@ -4203,7 +4347,11 @@
       lastStatus: '',
       intervalId: null,
       intervalSec: 60,
-      refreshing: false
+      refreshing: false,
+      tab: 'seg',
+      /** 수동 구간 인덱스 (null이면 GPS 구간 자동) */
+      manualSegIndex: null,
+      autoSegIndex: null
     };
 
     function elevGainBetween(fromIdx, toIdx) {
@@ -4279,52 +4427,233 @@
       el.className = 'rm-status' + (kind ? ' ' + kind : '');
     }
 
-    function drawRideElevCanvas(seg, atIdx) {
+        function drawRideElevCanvas(seg, atIdx) {
       const canvas = $('#rm-elev-canvas');
       if (!canvas || !state.currentGpx || !seg) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const W = Math.max(200, Math.floor(rect.width * dpr));
+      const H = Math.max(80, Math.floor(rect.height * dpr));
+      canvas.width = W;
+      canvas.height = H;
       const ctx = canvas.getContext('2d');
-      const W = canvas.width, H = canvas.height;
-      ctx.clearRect(0, 0, W, H);
       const points = state.currentGpx.points;
       const i0 = seg.startIdx, i1 = seg.endIdx;
       if (i1 <= i0) return;
-      let minE = Infinity, maxE = -Infinity;
+      let minE = Infinity, maxE = -Infinity, minI = i0, maxI = i0;
       for (let i = i0; i <= i1; i++) {
         const e = points[i].ele || 0;
-        if (e < minE) minE = e;
-        if (e > maxE) maxE = e;
+        if (e < minE) { minE = e; minI = i; }
+        if (e > maxE) { maxE = e; maxI = i; }
       }
-      if (maxE - minE < 1) { maxE = minE + 1; }
+      if (maxE - minE < 1) maxE = minE + 1;
       const d0 = points[i0].dist, d1 = points[i1].dist;
       const span = Math.max(0.001, d1 - d0);
+      const padL = 2 * dpr, padR = 2 * dpr, padT = 14 * dpr, padB = 16 * dpr;
+      const cW = W - padL - padR, cH = H - padT - padB;
+      const xAt = (dist) => padL + ((dist - d0) / span) * cW;
+      const yAt = (ele) => padT + cH - ((ele - minE) / (maxE - minE)) * cH;
+
+      // grid (light)
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, yAt(minE)); ctx.lineTo(padL + cW, yAt(minE));
+      ctx.moveTo(padL, yAt(maxE)); ctx.lineTo(padL + cW, yAt(maxE));
+      ctx.stroke();
+
+      // profile
       ctx.beginPath();
       for (let i = i0; i <= i1; i++) {
-        const x = ((points[i].dist - d0) / span) * (W - 4) + 2;
-        const y = H - 4 - ((points[i].ele || 0) - minE) / (maxE - minE) * (H - 8);
+        const x = xAt(points[i].dist);
+        const y = yAt(points[i].ele || 0);
         if (i === i0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
       ctx.strokeStyle = '#4a9eff';
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2 * dpr;
       ctx.stroke();
-      // fill
-      ctx.lineTo(W - 2, H);
-      ctx.lineTo(2, H);
+      ctx.lineTo(xAt(d1), padT + cH);
+      ctx.lineTo(xAt(d0), padT + cH);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(74,158,255,0.15)';
+      ctx.fillStyle = 'rgba(74,158,255,0.12)';
       ctx.fill();
-      // cursor
+
+      // min/max markers
+      ctx.fillStyle = '#888';
+      ctx.font = (9 * dpr) + 'px sans-serif';
+      const mark = (idx, label) => {
+        const x = xAt(points[idx].dist);
+        const y = yAt(points[idx].ele || 0);
+        ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, padT + cH);
+        ctx.stroke();
+        ctx.fillStyle = '#aaa';
+        ctx.fillText(label, Math.min(x + 3 * dpr, W - 40 * dpr), y - 3 * dpr);
+      };
+      mark(minI, '↓' + Math.round(minE));
+      if (maxI !== minI) mark(maxI, '↑' + Math.round(maxE));
+
+      // start / end labels
+      ctx.fillStyle = '#999';
+      ctx.font = (9 * dpr) + 'px sans-serif';
+      ctx.fillText(d0.toFixed(1) + '·' + Math.round(points[i0].ele || 0) + 'm', padL, H - 3 * dpr);
+      const endLab = d1.toFixed(1) + '·' + Math.round(points[i1].ele || 0) + 'm';
+      ctx.fillText(endLab, W - padR - ctx.measureText(endLab).width, H - 3 * dpr);
+
+      // current position
       if (atIdx != null && atIdx >= i0 && atIdx <= i1) {
-        const x = ((points[atIdx].dist - d0) / span) * (W - 4) + 2;
-        const y = H - 4 - ((points[atIdx].ele || 0) - minE) / (maxE - minE) * (H - 8);
+        const x = xAt(points[atIdx].dist);
+        const y = yAt(points[atIdx].ele || 0);
+        ctx.strokeStyle = 'rgba(248,113,113,0.7)';
+        ctx.lineWidth = 1.5 * dpr;
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, padT + cH);
+        ctx.stroke();
         ctx.fillStyle = '#f87171';
         ctx.beginPath();
-        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.arc(x, y, 4 * dpr, 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    function applyRideFix(lat, lon, accuracyM) {
+    function drawRideMinimap(atDist, seg) {
+      const canvas = $('#rm-mini-canvas');
+      if (!canvas || !state.currentGpx) return;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const W = Math.max(200, Math.floor(rect.width * dpr));
+      const H = Math.max(28, Math.floor(rect.height * dpr));
+      canvas.width = W;
+      canvas.height = H;
+      const ctx = canvas.getContext('2d');
+      const points = state.currentGpx.points;
+      const total = state.currentGpx.totalDistance || 1;
+      let minE = Infinity, maxE = -Infinity;
+      for (let i = 0; i < points.length; i++) {
+        const e = points[i].ele || 0;
+        if (e < minE) minE = e;
+        if (e > maxE) maxE = e;
+      }
+      if (maxE - minE < 1) maxE = minE + 1;
+      const pad = 2 * dpr;
+      const cW = W - pad * 2, cH = H - pad * 2;
+      ctx.beginPath();
+      for (let i = 0; i < points.length; i++) {
+        const x = pad + (points[i].dist / total) * cW;
+        const y = pad + cH - ((points[i].ele || 0) - minE) / (maxE - minE) * cH;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = '#3a3a3a';
+      ctx.lineWidth = 1 * dpr;
+      ctx.stroke();
+      // segment window
+      if (seg) {
+        const x0 = pad + (seg.startDist / total) * cW;
+        const x1 = pad + (seg.endDist / total) * cW;
+        ctx.fillStyle = 'rgba(74,158,255,0.2)';
+        ctx.fillRect(x0, pad, Math.max(2, x1 - x0), cH);
+        ctx.strokeStyle = 'rgba(74,158,255,0.5)';
+        ctx.strokeRect(x0, pad, Math.max(2, x1 - x0), cH);
+      }
+      // current
+      if (atDist != null) {
+        const x = pad + (atDist / total) * cW;
+        ctx.fillStyle = '#f87171';
+        ctx.beginPath();
+        ctx.arc(x, pad + cH / 2, 3 * dpr, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const curEl = $('#rm-mini-cur');
+      const endEl = $('#rm-mini-end');
+      if (curEl) curEl.textContent = (atDist != null ? atDist.toFixed(1) : '—') + ' km';
+      if (endEl) endEl.textContent = total.toFixed(1) + ' km';
+    }
+
+    function getRideSegIndex() {
+      if (rideState.manualSegIndex != null) return rideState.manualSegIndex;
+      return rideState.autoSegIndex != null ? rideState.autoSegIndex : 0;
+    }
+
+    function setRideManualSeg(idx) {
+      const n = (state.segments || []).length;
+      if (!n) return;
+      rideState.manualSegIndex = Math.max(0, Math.min(n - 1, idx));
+      updateRideSegNav();
+      if (rideState.lastFix && rideState.lastFix.near) {
+        applyRideFix(
+          rideState.lastFix.lat,
+          rideState.lastFix.lon,
+          rideState.lastFix.accuracyM,
+          true
+        );
+      } else {
+        applyRideSegOnly(getRideSegIndex());
+      }
+    }
+
+    function updateRideSegNav() {
+      const segs = state.segments || [];
+      const nodes = state.nodes || [];
+      const idx = getRideSegIndex();
+      const label = (i) => {
+        if (i < 0 || i >= segs.length) return '';
+        const a = nodes[i], b = nodes[i + 1];
+        if (a && b) return (a.name || '') + '→' + (b.name || '');
+        return '구간 ' + (i + 1);
+      };
+      const nameEl = $('#rm-seg-name');
+      if (nameEl) nameEl.textContent = label(idx) || '—';
+      const prev = $('#rm-prev-seg');
+      const next = $('#rm-next-seg');
+      if (prev) {
+        prev.disabled = idx <= 0;
+        const pl = $('#rm-prev-label');
+        if (pl) pl.textContent = idx > 0 ? label(idx - 1) : '이전';
+      }
+      if (next) {
+        next.disabled = idx >= segs.length - 1;
+        const nl = $('#rm-next-label');
+        if (nl) nl.textContent = idx < segs.length - 1 ? label(idx + 1) : '다음';
+      }
+    }
+
+    function applyRideSegOnly(segIndex) {
+      const seg = state.segments[segIndex];
+      if (!seg) return;
+      updateRideSegNav();
+      drawRideElevCanvas(seg, seg.startIdx);
+      drawRideMinimap(seg.startDist, seg);
+      const chips = [];
+      if (seg.targetPower != null) chips.push('<span class="rm-chip">목표 파워 <strong>' + seg.targetPower + ' W</strong></span>');
+      if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 <strong>' + seg.limitPower + ' W</strong></span>');
+      if (seg.targetHr != null) chips.push('<span class="rm-chip hr">목표 심박 <strong>' + seg.targetHr + '</strong></span>');
+      if (seg.limitHr != null) chips.push('<span class="rm-chip hr">제한 <strong>' + seg.limitHr + '</strong></span>');
+      if (seg.note) chips.push('<span class="rm-chip">' + escapeHtml(seg.note) + '</span>');
+      const tg = $('#rm-targets');
+      if (tg) tg.innerHTML = chips.join('') || '<span class="rm-chip">목표 미설정</span>';
+    }
+
+    function setRideTab(tab) {
+      if (tab === 'exit') {
+        closeRideMode();
+        return;
+      }
+      rideState.tab = tab;
+      $$('#ride-mode .rm-tab').forEach(b => {
+        b.classList.toggle('active', b.dataset.rmTab === tab);
+      });
+      $$('#ride-mode .rm-panel').forEach(p => {
+        p.classList.toggle('active', p.dataset.panel === tab);
+      });
+    }
+
+
+        function applyRideFix(lat, lon, accuracyM, keepManual) {
       const near = findNearestRoutePointByGeo(lat, lon);
       if (!near) {
         setRideStatus('트랙 없음', 'err');
@@ -4332,48 +4661,46 @@
       }
       const pt = near.point;
       const total = state.currentGpx.totalDistance;
-      const remDist = Math.max(0, total - pt.dist);
-      const remGain = elevGainBetween(near.index, state.currentGpx.points.length - 1);
+      const remDistCourse = Math.max(0, total - pt.dist);
+      const remGainCourse = elevGainBetween(near.index, state.currentGpx.points.length - 1);
       const coursePct = total > 0 ? Math.min(100, (pt.dist / total) * 100) : 0;
 
       const setVal = (id, text) => {
         const el = $(id);
         if (!el) return;
-        // keep <small> if present
         const small = el.querySelector('small');
         const unit = small ? small.outerHTML : '';
         el.innerHTML = text + unit;
       };
+
+      // course panel stats
       setVal('#rm-dist', pt.dist.toFixed(1));
       setVal('#rm-ele', String(Math.round(pt.ele || 0)));
-      setVal('#rm-rem-gain', String(Math.round(remGain)));
-      setVal('#rm-rem-dist', remDist.toFixed(1));
-      const prog = $('#rm-course-prog');
-      if (prog) prog.style.width = coursePct.toFixed(1) + '%';
+      setVal('#rm-rem-gain', String(Math.round(remGainCourse)));
+      setVal('#rm-course-rem-dist', remDistCourse.toFixed(1));
+      const pctEl = $('#rm-course-pct');
+      if (pctEl) pctEl.innerHTML = coursePct.toFixed(0) + '<small>%</small>';
 
       const hit = findSegmentAtDist(pt.dist);
-      const seg = hit && hit.seg;
-      const nodes = state.nodes || [];
-      let segLabel = '구간';
-      if (hit && nodes.length > hit.index + 1) {
-        const a = nodes[hit.index], b = nodes[hit.index + 1];
-        segLabel = (a && a.name ? a.name : '') + ' → ' + (b && b.name ? b.name : '');
-      }
-      const nameEl = $('#rm-seg-name');
-      if (nameEl) nameEl.textContent = segLabel;
+      if (hit) rideState.autoSegIndex = hit.index;
+      if (!keepManual) rideState.manualSegIndex = null;
+      const segIndex = getRideSegIndex();
+      const seg = state.segments[segIndex];
+      updateRideSegNav();
 
       if (seg) {
-        const span = Math.max(0.001, seg.endDist - seg.startDist);
-        const along = Math.min(1, Math.max(0, (pt.dist - seg.startDist) / span));
-        const segProg = $('#rm-seg-prog');
-        if (segProg) segProg.style.width = (along * 100).toFixed(1) + '%';
-        const posEl = $('#rm-seg-pos');
-        if (posEl) {
-          posEl.innerHTML = (pt.dist - seg.startDist).toFixed(1) + '<small>/' + span.toFixed(1) + ' km</small>';
-        }
-        const segGain = elevGainBetween(near.index, seg.endIdx);
+        const remDistSeg = Math.max(0, seg.endDist - pt.dist);
+        // if manually on another seg and GPS not in it, show full remaining of that seg from start
+        const inThis = pt.dist >= seg.startDist && pt.dist <= seg.endDist + 0.01;
+        const useDist = inThis ? pt.dist : seg.startDist;
+        const useIdx = inThis ? near.index : seg.startIdx;
+        const remD = Math.max(0, seg.endDist - (inThis ? pt.dist : seg.startDist));
+        setVal('#rm-rem-dist', remD.toFixed(1));
+        const segGain = elevGainBetween(useIdx, seg.endIdx);
         setVal('#rm-seg-gain', String(Math.round(segGain)));
 
+        const span = Math.max(0.001, seg.endDist - seg.startDist);
+        const along = inThis ? Math.min(1, Math.max(0, (pt.dist - seg.startDist) / span)) : 0;
         let remTime = '—';
         if (seg.targetDurationSec != null) {
           remTime = formatDurShort(seg.targetDurationSec * (1 - along));
@@ -4381,34 +4708,39 @@
         const rt = $('#rm-seg-rem-time');
         if (rt) rt.textContent = remTime;
         const eta = $('#rm-seg-eta');
-        if (eta) eta.textContent = plannedArrivalClockAtSegmentEnd(hit.index);
+        if (eta) eta.textContent = plannedArrivalClockAtSegmentEnd(segIndex);
+
+        // net grade remaining
+        const endEle = state.currentGpx.points[seg.endIdx] ? (state.currentGpx.points[seg.endIdx].ele || 0) : 0;
+        const curEle = inThis ? (pt.ele || 0) : (state.currentGpx.points[seg.startIdx].ele || 0);
+        const grade = remD > 0.01 ? ((endEle - curEle) / (remD * 1000)) * 100 : 0;
+        setVal('#rm-grade', (grade >= 0 ? '+' : '') + grade.toFixed(1));
 
         const chips = [];
         if (seg.targetPower != null) chips.push('<span class="rm-chip">목표 파워 <strong>' + seg.targetPower + ' W</strong></span>');
-        if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 파워 <strong>' + seg.limitPower + ' W</strong></span>');
+        if (seg.limitPower != null) chips.push('<span class="rm-chip warn">제한 <strong>' + seg.limitPower + ' W</strong></span>');
         if (seg.targetHr != null) chips.push('<span class="rm-chip hr">목표 심박 <strong>' + seg.targetHr + '</strong></span>');
-        if (seg.limitHr != null) chips.push('<span class="rm-chip hr">제한 심박 <strong>' + seg.limitHr + '</strong></span>');
+        if (seg.limitHr != null) chips.push('<span class="rm-chip hr">제한 <strong>' + seg.limitHr + '</strong></span>');
         if (seg.note) chips.push('<span class="rm-chip">' + escapeHtml(seg.note) + '</span>');
         const tg = $('#rm-targets');
         if (tg) tg.innerHTML = chips.join('') || '<span class="rm-chip">목표 미설정</span>';
 
-        drawRideElevCanvas(seg, near.index);
+        drawRideElevCanvas(seg, inThis ? near.index : null);
+        drawRideMinimap(pt.dist, seg);
       }
 
-      const off = $('#rm-off-route');
-      if (off) {
-        if (near.offRouteKm > 0.08) {
-          off.style.display = 'block';
-          off.textContent = '경로에서 약 ' + (near.offRouteKm * 1000).toFixed(0) + ' m 벗어남 (가장 가까운 트랙 기준)';
-        } else {
-          off.style.display = 'none';
-        }
-      }
-
+      const off = near.offRouteKm > 0.08;
       const acc = accuracyM != null ? ' ±' + Math.round(accuracyM) + 'm' : '';
       const t = new Date();
       const ts = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0') + ':' + String(t.getSeconds()).padStart(2, '0');
-      setRideStatus(ts + ' 갱신' + acc, near.offRouteKm > 0.08 ? 'warn' : 'ok');
+      let msg = ts + ' 갱신' + acc;
+      if (off) msg += ' · 경로 ' + (near.offRouteKm * 1000).toFixed(0) + 'm 이탈';
+      setRideStatus(msg, off ? 'warn' : 'ok');
+      const sc = $('#rm-status-course');
+      if (sc) {
+        sc.textContent = msg;
+        sc.className = 'rm-status-line ' + (off ? 'warn' : 'ok');
+      }
       rideState.lastFix = { lat, lon, accuracyM, at: Date.now(), near };
     }
 
@@ -4462,11 +4794,16 @@
         return;
       }
       rideState.active = true;
+      rideState.manualSegIndex = null;
+      rideState.autoSegIndex = 0;
       const el = $('#ride-mode');
       if (el) {
         el.classList.add('open');
         el.setAttribute('aria-hidden', 'false');
       }
+      setRideTab('seg');
+      updateRideSegNav();
+      applyRideSegOnly(0);
       setupRideInterval();
       refreshRidePosition();
     }
@@ -4498,8 +4835,13 @@
       $('#btn-close-seg').addEventListener('click', closeSegmentPanel);
       $('#btn-add-node')?.addEventListener('click', promptAddNode);
       $('#btn-ride-mode')?.addEventListener('click', openRideMode);
-      $('#rm-btn-exit')?.addEventListener('click', closeRideMode);
+      
       $('#rm-btn-refresh')?.addEventListener('click', refreshRidePosition);
+      $$('#ride-mode .rm-tab').forEach(btn => {
+        btn.addEventListener('click', () => setRideTab(btn.dataset.rmTab));
+      });
+      $('#rm-prev-seg')?.addEventListener('click', () => setRideManualSeg(getRideSegIndex() - 1));
+      $('#rm-next-seg')?.addEventListener('click', () => setRideManualSeg(getRideSegIndex() + 1));
       $('#rm-interval')?.addEventListener('change', setupRideInterval);
       document.addEventListener('visibilitychange', onRideVisibility);
       window.addEventListener('focus', () => { if (rideState.active) refreshRidePosition(); });
