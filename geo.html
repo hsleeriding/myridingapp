@@ -1,78 +1,766 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="color-scheme" content="dark light">
-<title>Mobile Sensor Lab</title>
-<style>
-:root{--bg:#0b0f14;--card:#141a22;--card2:#0f141b;--line:#2a3544;--text:#eef3f8;--muted:#93a1b1;--accent:#61b4ff;--good:#5ed48d;--warn:#ffca68;--bad:#ff6977}
-*{box-sizing:border-box}html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{padding:max(10px,env(safe-area-inset-top)) 10px max(18px,env(safe-area-inset-bottom));font-size:14px}h1{margin:3px 0 2px;font-size:20px}.sub{margin:0 0 11px;color:var(--muted);font-size:12px}.toolbar{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}button{appearance:none;border:1px solid var(--line);background:#1a222d;color:var(--text);border-radius:10px;min-height:44px;padding:7px 10px;font-size:14px;font-weight:650;touch-action:manipulation}button.primary{background:#1d3952;border-color:#345d7e}button:active{transform:translateY(1px)}.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;position:sticky;top:0;z-index:10;background:var(--bg)}.tab{position:relative;flex:0 0 auto;min-height:40px;padding:7px 12px;border-radius:20px}.tab.active{background:var(--accent);color:#061018;border-color:var(--accent)}.err-dot{display:none;position:absolute;width:9px;height:9px;right:5px;top:4px;background:var(--bad);border:1px solid var(--bg);border-radius:50%}.tab.has-error .err-dot{display:block}.panel{display:none}.panel.active{display:block}.card{margin:9px 0;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:12px}.card h2{margin:0 0 9px;font-size:15px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.metric{min-width:0;padding:9px;background:var(--card2);border:1px solid var(--line);border-radius:10px}.metric .k{color:var(--muted);font-size:11px}.metric .v{margin-top:2px;font:17px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.metric .u{color:var(--muted);font-size:11px}.row{display:grid;grid-template-columns:43% 57%;gap:5px;padding:6px 0;border-bottom:1px solid #ffffff10}.row:last-child{border-bottom:0}.key{color:var(--muted);overflow-wrap:anywhere}.val{text-align:right;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}.status{display:flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}.small{color:var(--muted);font-size:11px;line-height:1.45}.graph{height:190px;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#080c11}canvas{display:block;width:100%;height:100%}.level-wrap{position:relative;width:min(84vw,320px);height:min(58vw,220px);min-height:180px;overflow:hidden;margin:auto;border:1px solid var(--line);border-radius:12px;background:#0a0f15}.horizon{position:absolute;left:-30%;top:50%;width:160%;height:170%;transform-origin:center;background:linear-gradient(#43759e 0 48%,#b07050 48% 50%,#6a7e45 50%)}.cross-v,.cross-h{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;opacity:.9}.cross-v{width:2px;height:74%}.cross-h{width:74%;height:2px}.bubble{position:absolute;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #0007}.compass{position:relative;width:min(76vw,280px);aspect-ratio:1;margin:auto;border:3px solid var(--line);border-radius:50%;background:radial-gradient(circle,#17202b 0 57%,#0b1016 58% 100%);overflow:hidden}.compass .letter{position:absolute;font-weight:800;font-size:16px}.compass .N{top:6%;left:50%;transform:translateX(-50%);color:#ff6877}.compass .E{top:50%;right:6%;transform:translateY(-50%)}.compass .S{bottom:6%;left:50%;transform:translateX(-50%)}.compass .W{top:50%;left:6%;transform:translateY(-50%)}.needle{position:absolute;left:50%;top:50%;width:3px;height:82%;transform:translate(-50%,-50%) rotate(0deg);transform-origin:center;background:linear-gradient(to bottom,#ff6877 0 50%,#d7e2ec 50%)}.needle-center{position:absolute;left:50%;top:50%;width:13px;height:13px;transform:translate(-50%,-50%);border-radius:50%;background:#fff}.error-summary{display:none;margin-bottom:9px;padding:9px 10px;border:1px solid #713039;background:#40171e55;color:#ffb1b8;border-radius:10px;align-items:center;justify-content:space-between;gap:8px}.error-summary.show{display:flex}.error-summary button{min-height:36px;padding:5px 9px;font-size:12px}.badge{display:inline-block;padding:2px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px}.footer{padding:12px 2px;color:var(--muted);font-size:11px;text-align:center}.overlay{position:fixed;inset:0;z-index:100;display:none;background:#000b;backdrop-filter:blur(4px)}.overlay.open{display:flex}.log-window{width:min(96vw,820px);height:min(92vh,760px);margin:auto;display:flex;flex-direction:column;overflow:hidden;background:#111820;border:1px solid #394758;border-radius:14px;box-shadow:0 20px 70px #000b}.log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-bottom:1px solid var(--line)}.log-actions{display:flex;gap:6px}.log-actions button{min-height:36px;padding:5px 9px;font-size:12px}.log-body{flex:1;overflow:auto;padding:8px}.log-line{padding:5px 6px;border-bottom:1px solid #ffffff0a;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}.log-line.warn{color:var(--warn)}.log-line.error{color:#ff9da6;background:#4a18201c}.log-time{color:#718095}
-@media(min-width:700px){body{max-width:900px;margin:auto}.grid{grid-template-columns:repeat(3,1fr)}.toolbar{grid-template-columns:repeat(4,1fr)}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="color-scheme" content="dark light">
+  <title>Mobile Sensor Lab</title>
+  <style>
+    :root{--bg:#0b0f14;--card:#141a22;--card2:#0f141b;--line:#2a3544;--text:#eef3f8;--muted:#93a1b1;--accent:#61b4ff;--good:#5ed48d;--warn:#ffca68;--bad:#ff6977}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    body{padding:max(10px,env(safe-area-inset-top)) 10px max(18px,env(safe-area-inset-bottom));font-size:14px}
+    h1{margin:3px 0 2px;font-size:20px}
+    .sub{margin:0 0 11px;color:var(--muted);font-size:12px}
+    .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:9px}
+    button{appearance:none;border:1px solid var(--line);background:#1a222d;color:var(--text);border-radius:10px;min-height:44px;padding:7px 10px;font-size:14px;font-weight:650;touch-action:manipulation}
+    button.primary{background:#1d3952;border-color:#345d7e}
+    button:active{transform:translateY(1px)}
+    .tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;position:sticky;top:0;z-index:10;background:var(--bg)}
+    .tab{position:relative;flex:0 0 auto;min-height:40px;padding:7px 12px;border-radius:20px}
+    .tab.active{background:var(--accent);color:#061018;border-color:var(--accent)}
+    .err-dot{display:none;position:absolute;width:9px;height:9px;right:5px;top:4px;background:var(--bad);border:1px solid var(--bg);border-radius:50%}
+    .tab.has-error .err-dot{display:block}
+    .panel{display:none}
+    .panel.active{display:block}
+    .card{margin:9px 0;padding:10px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+    .card h2{margin:0 0 9px;font-size:15px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .metric{min-width:0;padding:9px;background:var(--card2);border:1px solid var(--line);border-radius:10px}
+    .metric .k{color:var(--muted);font-size:11px}
+    .metric .v{margin-top:2px;font:17px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+    .metric .u{color:var(--muted);font-size:11px}
+    .row{display:grid;grid-template-columns:43% 57%;gap:5px;padding:6px 0;border-bottom:1px solid #ffffff10}
+    .row:last-child{border-bottom:0}
+    .key{color:var(--muted);overflow-wrap:anywhere}
+    .val{text-align:right;font:12px ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+    .status{display:flex;align-items:center;gap:7px}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+    .dot.good{background:var(--good)}
+    .dot.warn{background:var(--warn)}
+    .dot.bad{background:var(--bad)}
+    .small{color:var(--muted);font-size:11px;line-height:1.45}
+    .graph{height:190px;overflow:hidden;border:1px solid var(--line);border-radius:10px;background:#080c11}
+    canvas{display:block;width:100%;height:100%}
+    .level-wrap{position:relative;width:min(84vw,320px);height:min(58vw,220px);min-height:180px;overflow:hidden;margin:auto;border:1px solid var(--line);border-radius:12px;background:#0a0f15}
+    .horizon{position:absolute;left:-30%;top:50%;width:160%;height:170%;transform-origin:center;background:linear-gradient(#43759e 0 48%,#b07050 48% 50%,#6a7e45 50%)}
+    .cross-v,.cross-h{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;opacity:.9}
+    .cross-v{width:2px;height:74%}
+    .cross-h{width:74%;height:2px}
+    .bubble{position:absolute;left:50%;top:50%;width:24px;height:24px;transform:translate(-50%,-50%);border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 2px #0007}
+    .compass{position:relative;width:min(76vw,280px);aspect-ratio:1;margin:auto;border:3px solid var(--line);border-radius:50%;background:radial-gradient(circle,#17202b 0 57%,#0b1016 58% 100%);overflow:hidden}
+    .compass .letter{position:absolute;font-weight:800;font-size:16px}
+    .compass .N{top:6%;left:50%;transform:translateX(-50%);color:#ff6877}
+    .compass .E{top:50%;right:6%;transform:translateY(-50%)}
+    .compass .S{bottom:6%;left:50%;transform:translateX(-50%)}
+    .compass .W{top:50%;left:6%;transform:translateY(-50%)}
+    .needle{position:absolute;left:50%;top:50%;width:3px;height:82%;transform:translate(-50%,-50%) rotate(0deg);transform-origin:center;background:linear-gradient(to bottom,#ff6877 0 50%,#d7e2ec 50%)}
+    .needle-center{position:absolute;left:50%;top:50%;width:13px;height:13px;transform:translate(-50%,-50%);border-radius:50%;background:#fff}
+    .error-summary{display:none;margin-bottom:9px;padding:9px 10px;border:1px solid #713039;background:#40171e55;color:#ffb1b8;border-radius:10px;align-items:center;justify-content:space-between;gap:8px}
+    .error-summary.show{display:flex}
+    .error-summary button{min-height:36px;padding:5px 9px;font-size:12px}
+    .badge{display:inline-block;padding:2px 7px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:11px}
+    .footer{padding:12px 2px;color:var(--muted);font-size:11px;text-align:center}
+    .overlay{position:fixed;inset:0;z-index:100;display:none;background:#000b;backdrop-filter:blur(4px)}
+    .overlay.open{display:flex}
+    .log-window{width:min(96vw,820px);height:min(92vh,760px);margin:auto;display:flex;flex-direction:column;overflow:hidden;background:#111820;border:1px solid #394758;border-radius:14px;box-shadow:0 20px 70px #000b}
+    .log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-bottom:1px solid var(--line)}
+    .log-actions{display:flex;gap:6px}
+    .log-actions button{min-height:36px;padding:5px 9px;font-size:12px}
+    .log-body{flex:1;overflow:auto;padding:8px}
+    .log-line{padding:5px 6px;border-bottom:1px solid #ffffff0a;font:11px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+    .log-line.warn{color:var(--warn)}
+    .log-line.error{color:#ff9da6;background:#4a18201c}
+    .log-time{color:#718095}
+    @media(min-width:700px){
+      body{max-width:900px;margin:auto}
+      .grid{grid-template-columns:repeat(3,1fr)}
+      .toolbar{grid-template-columns:repeat(4,1fr)}
+    }
+  </style>
 </head>
 <body>
-<h1>📱 Mobile Sensor Lab</h1>
-<div class="sub">위치·가속도·자이로·기울기·방향·자기계를 검사합니다. 측정값과 로그는 외부 서버로 전송하지 않습니다.</div>
-<div id="errorSummary" class="error-summary"><span>⚠️ 오류가 발생했습니다. 로그에서 자세한 내용을 확인하세요.</span><button id="openLogFromError">로그 보기</button></div>
-<div class="toolbar"><button id="startAll" class="primary">▶ 전체 측정 시작</button><button id="stopAll">■ 전체 측정 중지</button><button id="onceGps">📍 GPS 1회</button><button id="openLog">▤ 로그 보기 <span id="errorCountBadge"></span></button></div>
-<div class="tabs">
-<button class="tab active" data-tab="gps" data-sensor="gps">📍 GPS<span class="err-dot"></span></button>
-<button class="tab" data-tab="motion" data-sensor="motion">↗ 가속도<span class="err-dot"></span></button>
-<button class="tab" data-tab="gyro" data-sensor="gyro">⟳ 자이로<span class="err-dot"></span></button>
-<button class="tab" data-tab="orientation" data-sensor="orientation">🧭 방향/기울기<span class="err-dot"></span></button>
-<button class="tab" data-tab="mag" data-sensor="mag">🧲 자기계<span class="err-dot"></span></button>
-<button class="tab" data-tab="support" data-sensor="support">⚙ 지원<span class="err-dot"></span></button>
-</div>
-<section id="gps" class="panel active"><div class="card"><h2>현재 위치</h2><div class="grid">
-<div class="metric"><div class="k">Latitude</div><div id="gpsLat" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">Longitude</div><div id="gpsLon" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">Accuracy</div><div id="gpsAcc" class="v">—</div><div class="u">m</div></div><div class="metric"><div class="k">Altitude</div><div id="gpsAlt" class="v">—</div><div class="u">m</div></div><div class="metric"><div class="k">Altitude accuracy</div><div id="gpsAltAcc" class="v">—</div><div class="u">m</div></div><div class="metric"><div class="k">Speed</div><div id="gpsSpeed" class="v">—</div><div class="u">m/s · km/h</div></div><div class="metric"><div class="k">Heading</div><div id="gpsHeading" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">Timestamp</div><div id="gpsTime" class="v">—</div><div class="u">position timestamp</div></div>
-</div></div><div class="card"><h2>연속 측정 통계</h2><div id="gpsStats"><div class="small">아직 측정하지 않았습니다.</div></div></div></section>
-<section id="motion" class="panel"><div class="card"><h2>가속도 — 선형 가속도</h2><div class="grid"><div class="metric"><div class="k">X</div><div id="ax" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Y</div><div id="ay" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Z</div><div id="az" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Magnitude</div><div id="amag" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Event interval</div><div id="motionInterval" class="v">—</div><div class="u">ms</div></div><div class="metric"><div class="k">Event rate</div><div id="motionHz" class="v">—</div><div class="u">Hz</div></div></div></div><div class="card"><h2>중력 포함 가속도</h2><div class="grid"><div class="metric"><div class="k">X</div><div id="gax" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Y</div><div id="gay" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Z</div><div id="gaz" class="v">—</div><div class="u">m/s²</div></div><div class="metric"><div class="k">Magnitude</div><div id="gamag" class="v">—</div><div class="u">m/s²</div></div></div></div><div class="card"><h2>실시간 그래프</h2><div class="graph"><canvas id="accCanvas"></canvas></div></div></section>
-<section id="gyro" class="panel"><div class="card"><h2>자이로 — 회전 속도</h2><div class="grid"><div class="metric"><div class="k">Alpha</div><div id="ra" class="v">—</div><div class="u">deg/s</div></div><div class="metric"><div class="k">Beta</div><div id="rb" class="v">—</div><div class="u">deg/s</div></div><div class="metric"><div class="k">Gamma</div><div id="rg" class="v">—</div><div class="u">deg/s</div></div><div class="metric"><div class="k">Magnitude</div><div id="rmag" class="v">—</div><div class="u">deg/s</div></div><div class="metric"><div class="k">Event interval</div><div id="gyroInterval" class="v">—</div><div class="u">ms</div></div><div class="metric"><div class="k">Event rate</div><div id="gyroHz" class="v">—</div><div class="u">Hz</div></div></div></div><div class="card"><h2>실시간 그래프</h2><div class="graph"><canvas id="gyroCanvas"></canvas></div></div></section>
-<section id="orientation" class="panel"><div class="card"><h2>기기 자세 / 방향</h2><div class="grid"><div class="metric"><div class="k">alpha</div><div id="oalpha" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">beta</div><div id="obeta" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">gamma</div><div id="ogamma" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">absolute</div><div id="oabs" class="v">—</div><div class="u">boolean</div></div><div class="metric"><div class="k">Event count</div><div id="orientCount" class="v">0</div><div class="u">count</div></div><div class="metric"><div class="k">Approx rate</div><div id="orientHz" class="v">—</div><div class="u">Hz</div></div></div></div><div class="card"><h2>수평계 / 기울기</h2><div class="level-wrap"><div id="horizon" class="horizon"></div><div class="cross-v"></div><div class="cross-h"></div><div class="bubble"></div></div><div class="grid" style="margin-top:9px"><div class="metric"><div class="k">좌우 gamma</div><div id="levelGamma" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">앞뒤 beta</div><div id="levelBeta" class="v">—</div><div class="u">deg</div></div></div></div><div class="card"><h2>방향 시각화</h2><div class="compass"><div class="letter N">N</div><div class="letter E">E</div><div class="letter S">S</div><div class="letter W">W</div><div id="needle" class="needle"></div><div class="needle-center"></div></div><div class="grid" style="margin-top:9px"><div class="metric"><div class="k">Heading visual</div><div id="compassDeg" class="v">—</div><div class="u">deg</div></div><div class="metric"><div class="k">8방위</div><div id="compassDir" class="v">—</div><div class="u">N / NE / E ...</div></div></div><div class="small" style="margin-top:8px">나침반 바늘은 브라우저 orientation 값을 시각화합니다. 절대적인 북쪽과 항상 일치한다고 가정하면 안 됩니다.</div></div></section>
-<section id="mag" class="panel"><div class="card"><h2>자기계 — raw 자기장</h2><div id="magSupport" class="status"><span class="dot"></span><span>측정 전</span></div><div class="grid" style="margin-top:8px"><div class="metric"><div class="k">X</div><div id="mx" class="v">—</div><div class="u">µT</div></div><div class="metric"><div class="k">Y</div><div id="my" class="v">—</div><div class="u">µT</div></div><div class="metric"><div class="k">Z</div><div id="mz" class="v">—</div><div class="u">µT</div></div><div class="metric"><div class="k">Magnitude</div><div id="mmag" class="v">—</div><div class="u">µT</div></div><div class="metric"><div class="k">Samples</div><div id="mcount" class="v">0</div><div class="u">count</div></div><div class="metric"><div class="k">Rate</div><div id="mhz" class="v">—</div><div class="u">Hz</div></div></div><div class="small" style="margin-top:8px">지원/권한/보안정책 때문에 사용하지 못할 수 있습니다.</div></div></section>
-<section id="support" class="panel"><div class="card"><h2>브라우저 / 실행 환경</h2><div id="env"></div></div><div class="card"><h2>데이터별 실제 상태</h2><div id="supportTable"></div></div></section>
-<div class="footer">센서 데이터와 로그를 외부 서버로 전송하는 코드가 없습니다.</div>
-<div id="logOverlay" class="overlay" aria-hidden="true"><div class="log-window" role="dialog" aria-modal="true"><div class="log-head"><strong>▤ 센서 로그 <span id="logCountText" class="badge">0</span></strong><div class="log-actions"><button id="copyLog">복사</button><button id="clearLog">지우기</button><button id="closeLog">닫기</button></div></div><div id="logBody" class="log-body"></div></div></div>
-<script>
-"use strict";
-const $=id=>document.getElementById(id);
-const S={gpsWatch:null,motion:false,mag:null,gps:[],acc:[],gyro:[],motionCount:0,gyroCount:0,orientCount:0,magCount:0,motionStart:0,gyroStart:0,orientStart:0,magStart:0,errors:0,errorTabs:{}};
-function fmt(v,d=3){return Number.isFinite(v)?Number(v).toFixed(d):"—"}
-function esc(v){return String(v??"—").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")}
-function mag(x,y,z){return Math.sqrt((x||0)**2+(y||0)**2+(z||0)**2)}
-function row(k,v){return '<div class="row"><div class="key">'+esc(k)+'</div><div class="val">'+esc(v)+'</div></div>'}
-function log(msg,level="info"){const d=document.createElement("div");d.className="log-line "+level;d.innerHTML='<span class="log-time">['+esc(new Date().toLocaleTimeString())+']</span> '+esc(msg);$("logBody").prepend(d);$("logCountText").textContent=String($("logBody").children.length)}
-function error(sensor,e,ctx=""){S.errors++;S.errorTabs[sensor]=true;const m=e&&e.message?e.message:String(e);log("ERROR "+sensor+(ctx?" | "+ctx:"")+" | "+m,"error");const t=document.querySelector('.tab[data-sensor="'+sensor+'"]');if(t)t.classList.add("has-error");$("errorSummary").classList.add("show");$("errorCountBadge").textContent="⚠ "+S.errors}
-window.addEventListener("error",e=>error("support",e.error||new Error(e.message||"window error"),"unhandled window error"));
-window.addEventListener("unhandledrejection",e=>error("support",e.reason||new Error("promise rejection"),"unhandled promise rejection"));
-function openLog(){$("logOverlay").classList.add("open");$("logOverlay").setAttribute("aria-hidden","false")}
-function closeLog(){$("logOverlay").classList.remove("open");$("logOverlay").setAttribute("aria-hidden","true")}
-$("openLog").onclick=openLog;$("openLogFromError").onclick=openLog;$("closeLog").onclick=closeLog;$("logOverlay").onclick=e=>{if(e.target===$("logOverlay"))closeLog()}
-$("clearLog").onclick=()=>{$("logBody").innerHTML="";S.errors=0;S.errorTabs={};document.querySelectorAll(".tab.has-error").forEach(t=>t.classList.remove("has-error"));$("errorCountBadge").textContent="";$("errorSummary").classList.remove("show");log("로그 및 오류 표시 초기화")}
-$("copyLog").onclick=async()=>{try{const s=[...$("logBody").children].map(x=>x.textContent).reverse().join("\n");await navigator.clipboard.writeText(s);log("로그 복사 완료")}catch(e){error("support",e,"로그 복사")}}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");$(b.dataset.tab).classList.add("active")});
-function gpsOK(p){try{const c=p.coords;$("gpsLat").textContent=fmt(c.latitude,8);$("gpsLon").textContent=fmt(c.longitude,8);$("gpsAcc").textContent=fmt(c.accuracy,2);$("gpsAlt").textContent=c.altitude==null?"null":fmt(c.altitude,2);$("gpsAltAcc").textContent=c.altitudeAccuracy==null?"null":fmt(c.altitudeAccuracy,2);$("gpsSpeed").textContent=c.speed==null?"null":fmt(c.speed,3)+" / "+fmt(c.speed*3.6,2);$("gpsHeading").textContent=c.heading==null?"null":fmt(c.heading,2);$("gpsTime").textContent=new Date(p.timestamp).toLocaleTimeString();S.gps.push(p);if(S.gps.length>5000)S.gps.shift();const a=S.gps.map(x=>x.coords.accuracy).filter(Number.isFinite),al=S.gps.map(x=>x.coords.altitude).filter(Number.isFinite),sp=S.gps.map(x=>x.coords.speed).filter(Number.isFinite);let h=row("샘플 수",S.gps.length);if(a.length){const av=a.reduce((x,y)=>x+y,0)/a.length;h+=row("accuracy min / avg / max",fmt(Math.min(...a),2)+" / "+fmt(av,2)+" / "+fmt(Math.max(...a),2)+" m")}if(al.length){const av=al.reduce((x,y)=>x+y,0)/al.length;h+=row("altitude min / avg / max",fmt(Math.min(...al),2)+" / "+fmt(av,2)+" / "+fmt(Math.max(...al),2)+" m")}if(sp.length)h+=row("speed max",fmt(Math.max(...sp)*3.6,2)+" km/h");$("gpsStats").innerHTML=h;log("GPS 위치 수신: accuracy "+fmt(c.accuracy,2)+" m")}catch(e){error("gps",e,"GPS callback")}}
-function gpsERR(e){error("gps",e,"code "+e.code)}
-function startGPS(){try{if(!(navigator.geolocation))throw new Error("Geolocation API 없음");if(S.gpsWatch!==null)return;S.gpsWatch=navigator.geolocation.watchPosition(gpsOK,gpsERR,{enableHighAccuracy:true,maximumAge:0,timeout:30000});log("GPS watchPosition 시작")}catch(e){error("gps",e,"GPS 시작")}}
-function onceGPS(){try{if(!(navigator.geolocation))throw new Error("Geolocation API 없음");log("GPS 1회 측정 요청");navigator.geolocation.getCurrentPosition(gpsOK,gpsERR,{enableHighAccuracy:true,maximumAge:0,timeout:30000})}catch(e){error("gps",e,"GPS 1회")}}
-function stopGPS(){try{if(S.gpsWatch!==null){navigator.geolocation.clearWatch(S.gpsWatch);S.gpsWatch=null;log("GPS 중지")}}catch(e){error("gps",e,"GPS 중지")}}
-function motion(e){try{S.motionCount++;if(!S.motionStart)S.motionStart=performance.now();const a=e.acceleration||{},g=e.accelerationIncludingGravity||{};$("ax").textContent=fmt(a.x);$("ay").textContent=fmt(a.y);$("az").textContent=fmt(a.z);$("amag").textContent=fmt(mag(a.x,a.y,a.z));$("gax").textContent=fmt(g.x);$("gay").textContent=fmt(g.y);$("gaz").textContent=fmt(g.z);$("gamag").textContent=fmt(mag(g.x,g.y,g.z));if(e.interval>0){$("motionInterval").textContent=fmt(e.interval,1);$("motionHz").textContent=fmt(1000/e.interval,1)}S.acc.push({x:a.x||0,y:a.y||0,z:a.z||0});if(S.acc.length>220)S.acc.shift();draw("accCanvas",S.acc,false)}catch(x){error("motion",x,"devicemotion")}}
-function gyro(e){try{const r=e.rotationRate||{};if(r.alpha==null&&r.beta==null&&r.gamma==null)return;S.gyroCount++;if(!S.gyroStart)S.gyroStart=performance.now();$("ra").textContent=fmt(r.alpha,2);$("rb").textContent=fmt(r.beta,2);$("rg").textContent=fmt(r.gamma,2);$("rmag").textContent=fmt(mag(r.alpha,r.beta,r.gamma),2);if(e.interval>0){$("gyroInterval").textContent=fmt(e.interval,1);$("gyroHz").textContent=fmt(1000/e.interval,1)}S.gyro.push({x:r.alpha||0,y:r.beta||0,z:r.gamma||0});if(S.gyro.length>220)S.gyro.shift();draw("gyroCanvas",S.gyro,true)}catch(x){error("gyro",x,"rotationRate")}}
-async function startMotion(){if(S.motion)return;try{if(typeof DeviceMotionEvent!=="undefined"&&typeof DeviceMotionEvent.requestPermission==="function"){const p=await DeviceMotionEvent.requestPermission();log("Motion permission: "+p);if(p!=="granted")log("Motion 권한이 허용되지 않아 값이 안 들어올 수 있습니다.","warn")}if(!(DeviceMotionEvent in window))throw new Error("DeviceMotionEvent 없음");window.addEventListener("devicemotion",motion,true);window.addEventListener("devicemotion",gyro,true);window.addEventListener("deviceorientation",orientation,true);S.motion=true;log("가속도 / 자이로 / 방향 listener 시작")}catch(e){error("motion",e,"센서 시작")}}
-function stopMotion(){try{window.removeEventListener("devicemotion",motion,true);window.removeEventListener("devicemotion",gyro,true);window.removeEventListener("deviceorientation",orientation,true);S.motion=false;log("모션 센서 중지")}catch(e){error("motion",e,"센서 중지")}}
-function orientation(e){try{S.orientCount++;if(!S.orientStart)S.orientStart=performance.now();$("oalpha").textContent=fmt(e.alpha,2);$("obeta").textContent=fmt(e.beta,2);$("ogamma").textContent=fmt(e.gamma,2);$("oabs").textContent=String(e.absolute);$("orientCount").textContent=String(S.orientCount);const sec=(performance.now()-S.orientStart)/1000;if(sec>0)$("orientHz").textContent=fmt(S.orientCount/sec,1);$("levelGamma").textContent=fmt(e.gamma,2);$("levelBeta").textContent=fmt(e.beta,2);const ga=Number.isFinite(e.gamma)?e.gamma:0,be=Number.isFinite(e.beta)?e.beta:0;$("horizon").style.transform="translateY("+(Math.max(-45,Math.min(45,be))*1.8)+"px) rotate("+(-ga)+"deg)";if(Number.isFinite(e.alpha)){const h=((e.alpha%360)+360)%360;$("compassDeg").textContent=fmt(h,1);$("compassDir").textContent=["N","NE","E","SE","S","SW","W","NW"][Math.round(h/45)%8];$("needle").style.transform="translate(-50%,-50%) rotate("+h+"deg)"}}catch(x){error("orientation",x,"deviceorientation")}}
-function setMag(type,msg){$("magSupport").innerHTML='<span class="dot '+type+'"></span><span>'+esc(msg)+'</span>'}
-function magRead(){try{S.magCount++;if(!S.magStart)S.magStart=performance.now();const x=S.mag.x,y=S.mag.y,z=S.mag.z;$("mx").textContent=fmt(x,2);$("my").textContent=fmt(y,2);$("mz").textContent=fmt(z,2);$("mmag").textContent=fmt(mag(x,y,z),2);$("mcount").textContent=String(S.magCount);const sec=(performance.now()-S.magStart)/1000;if(sec>0)$("mhz").textContent=fmt(S.magCount/sec,1)}catch(e){error("mag",e,"Magnetometer reading")}}
-function startMag(){try{if(!(window.Magnetometer in window))throw new Error("Magnetometer API 없음");S.mag=new Magnetometer({frequency:20});S.mag.addEventListener("reading",magRead);S.mag.addEventListener("error",e=>error("mag",e.error||new Error("Magnetometer error"),"sensor error"));S.mag.start();setMag("good","Magnetometer 시작됨");log("Magnetometer 시작 요청")}catch(e){setMag("bad","사용 불가");error("mag",e,"Magnetometer 시작")}}
-function stopMag(){try{if(S.mag){S.mag.stop();S.mag=null;log("Magnetometer 중지")}}catch(e){error("mag",e,"Magnetometer 중지")}}
-function draw(id,data,gyroMode){try{const c=$(id),ctx=c.getContext("2d"),r=c.getBoundingClientRect(),d=devicePixelRatio||1;c.width=Math.max(1,r.width*d);c.height=Math.max(1,r.height*d);ctx.clearRect(0,0,c.width,c.height);ctx.save();ctx.scale(d,d);const W=r.width,H=r.height;ctx.strokeStyle="#ffffff18";for(let i=1;i<5;i++){const y=i*H/5;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke()}if(!data.length){ctx.restore();return}let max=gyroMode?100:10;data.forEach(p=>max=Math.max(max,Math.abs(p.x),Math.abs(p.y),Math.abs(p.z)));[["x","#61b4ff"],["y","#5ed48d"],["z","#ffca68"]].forEach(([k,col])=>{ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();data.forEach((p,i)=>{const x=i/Math.max(1,data.length-1)*W,y=H/2-p[k]/max*H*.43;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke()});ctx.fillStyle="#93a1b1";ctx.font="11px ui-monospace,monospace";ctx.fillText("±"+max.toFixed(1)+(gyroMode?" deg/s":" m/s²"),6,14);ctx.restore()}catch(e){error("support",e,"graph rendering")}}
-function updateSupport(){try{$("env").innerHTML=[row("Protocol",location.protocol),row("Secure Context",window.isSecureContext?"YES":"NO"),row("URL",location.href),row("User Agent",navigator.userAgent),row("Geolocation","geolocation"in navigator?"지원":"미지원"),row("DeviceMotionEvent","DeviceMotionEvent"in window?"지원":"미지원"),row("DeviceOrientationEvent","DeviceOrientationEvent"in window?"지원":"미지원"),row("Accelerometer","Accelerometer"in window?"지원":"미지원"),row("Gyroscope","Gyroscope"in window?"지원":"미지원"),row("Magnetometer","Magnetometer"in window?"지원":"미지원"),row("AbsoluteOrientationSensor","AbsoluteOrientationSensor"in window?"지원":"미지원")].join("");const items=[["GPS 위치","geolocation"in navigator,S.gps.length,"Geolocation"],["선형 가속도","DeviceMotionEvent"in window,S.motionCount,"devicemotion.acceleration"],["중력 포함 가속도","DeviceMotionEvent"in window,S.motionCount,"devicemotion.accelerationIncludingGravity"],["자이로 회전속도","DeviceMotionEvent"in window,S.gyroCount,"devicemotion.rotationRate"],["기기 기울기","DeviceOrientationEvent"in window,S.orientCount,"deviceorientation beta/gamma"],["Raw 자기장 XYZ","Magnetometer"in window,S.magCount,"Magnetometer"]];$("supportTable").innerHTML=items.map(x=>row(x[0],x[2]?"✅ 감지됨":x[1]?"🟡 API 있음 / 값 미수신":"❌ API 없음")+"<div class=\"small\">"+esc(x[3])+"</div>").join("")}catch(e){error("support",e,"support rendering")}}
-async function startAll(){log("전체 측정 시작");startGPS();await startMotion();startMag();updateSupport()}
-function stopAll(){stopGPS();stopMotion();stopMag();log("전체 측정 중지");updateSupport()}
-$("startAll").onclick=()=>startAll().catch(e=>error("support",e,"전체 시작"));$("stopAll").onclick=stopAll;$("onceGps").onclick=onceGPS;
-window.addEventListener("resize",()=>{draw("accCanvas",S.acc,false);draw("gyroCanvas",S.gyro,true)});
-updateSupport();draw("accCanvas",[],false);draw("gyroCanvas",[],true);log("페이지 로드 완료");if(location.protocol==="file:")log("현재 file:// 로 실행 중입니다. 브라우저에 따라 위치/센서 권한이 제한될 수 있습니다.","warn");if(!window.isSecureContext)log("Secure Context가 아닙니다. 일부 센서 API가 동작하지 않을 수 있습니다.","warn");
-</script>
+  <h1>📱 Mobile Sensor Lab</h1>
+  <div class="sub">위치·가속도·자이로·기울기·방향·자기계를 검사합니다. 측정값과 로그는 외부 서버로 전송하지 않습니다.</div>
+
+  <div id="errorSummary" class="error-summary">
+    <span>⚠️ 오류가 발생했습니다. 로그에서 자세한 내용을 확인하세요.</span>
+    <button id="openLogFromError">로그 보기</button>
+  </div>
+
+  <div class="toolbar">
+    <button id="startAll" class="primary">▶ 전체 측정 시작</button>
+    <button id="stopAll">■ 전체 측정 중지</button>
+    <button id="onceGps">📍 GPS 1회</button>
+    <button id="openLog">▤ 로그 보기 <span id="errorCountBadge"></span></button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="gps" data-sensor="gps">📍 GPS<span class="err-dot"></span></button>
+    <button class="tab" data-tab="motion" data-sensor="motion">↗ 가속도<span class="err-dot"></span></button>
+    <button class="tab" data-tab="gyro" data-sensor="gyro">⟳ 자이로<span class="err-dot"></span></button>
+    <button class="tab" data-tab="orientation" data-sensor="orientation">🧭 방향/기울기<span class="err-dot"></span></button>
+    <button class="tab" data-tab="mag" data-sensor="mag">🧲 자기계<span class="err-dot"></span></button>
+    <button class="tab" data-tab="support" data-sensor="support">⚙ 지원<span class="err-dot"></span></button>
+  </div>
+
+  <!-- GPS -->
+  <section id="gps" class="panel active">
+    <div class="card">
+      <h2>현재 위치</h2>
+      <div class="grid">
+        <div class="metric"><div class="k">Latitude</div><div id="gpsLat" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">Longitude</div><div id="gpsLon" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">Accuracy</div><div id="gpsAcc" class="v">—</div><div class="u">m</div></div>
+        <div class="metric"><div class="k">Altitude</div><div id="gpsAlt" class="v">—</div><div class="u">m</div></div>
+        <div class="metric"><div class="k">Altitude accuracy</div><div id="gpsAltAcc" class="v">—</div><div class="u">m</div></div>
+        <div class="metric"><div class="k">Speed</div><div id="gpsSpeed" class="v">—</div><div class="u">m/s · km/h</div></div>
+        <div class="metric"><div class="k">Heading</div><div id="gpsHeading" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">Timestamp</div><div id="gpsTime" class="v">—</div><div class="u">position timestamp</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>연속 측정 통계</h2>
+      <div id="gpsStats"><div class="small">아직 측정하지 않았습니다.</div></div>
+    </div>
+  </section>
+
+  <!-- 가속도 -->
+  <section id="motion" class="panel">
+    <div class="card">
+      <h2>가속도 — 선형 가속도</h2>
+      <div class="grid">
+        <div class="metric"><div class="k">X</div><div id="ax" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Y</div><div id="ay" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Z</div><div id="az" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Magnitude</div><div id="amag" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Event interval</div><div id="motionInterval" class="v">—</div><div class="u">ms</div></div>
+        <div class="metric"><div class="k">Event rate</div><div id="motionHz" class="v">—</div><div class="u">Hz</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>중력 포함 가속도</h2>
+      <div class="grid">
+        <div class="metric"><div class="k">X</div><div id="gax" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Y</div><div id="gay" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Z</div><div id="gaz" class="v">—</div><div class="u">m/s²</div></div>
+        <div class="metric"><div class="k">Magnitude</div><div id="gamag" class="v">—</div><div class="u">m/s²</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>실시간 그래프</h2>
+      <div class="graph"><canvas id="accCanvas"></canvas></div>
+    </div>
+  </section>
+
+  <!-- 자이로 -->
+  <section id="gyro" class="panel">
+    <div class="card">
+      <h2>자이로 — 회전 속도</h2>
+      <div class="grid">
+        <div class="metric"><div class="k">Alpha</div><div id="ra" class="v">—</div><div class="u">deg/s</div></div>
+        <div class="metric"><div class="k">Beta</div><div id="rb" class="v">—</div><div class="u">deg/s</div></div>
+        <div class="metric"><div class="k">Gamma</div><div id="rg" class="v">—</div><div class="u">deg/s</div></div>
+        <div class="metric"><div class="k">Magnitude</div><div id="rmag" class="v">—</div><div class="u">deg/s</div></div>
+        <div class="metric"><div class="k">Event interval</div><div id="gyroInterval" class="v">—</div><div class="u">ms</div></div>
+        <div class="metric"><div class="k">Event rate</div><div id="gyroHz" class="v">—</div><div class="u">Hz</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>실시간 그래프</h2>
+      <div class="graph"><canvas id="gyroCanvas"></canvas></div>
+    </div>
+  </section>
+
+  <!-- 방향 / 기울기 -->
+  <section id="orientation" class="panel">
+    <div class="card">
+      <h2>기기 자세 / 방향</h2>
+      <div class="grid">
+        <div class="metric"><div class="k">alpha</div><div id="oalpha" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">beta</div><div id="obeta" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">gamma</div><div id="ogamma" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">absolute</div><div id="oabs" class="v">—</div><div class="u">boolean</div></div>
+        <div class="metric"><div class="k">Event count</div><div id="orientCount" class="v">0</div><div class="u">count</div></div>
+        <div class="metric"><div class="k">Approx rate</div><div id="orientHz" class="v">—</div><div class="u">Hz</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>수평계 / 기울기</h2>
+      <div class="level-wrap">
+        <div id="horizon" class="horizon"></div>
+        <div class="cross-v"></div>
+        <div class="cross-h"></div>
+        <div class="bubble"></div>
+      </div>
+      <div class="grid" style="margin-top:9px">
+        <div class="metric"><div class="k">좌우 gamma</div><div id="levelGamma" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">앞뒤 beta</div><div id="levelBeta" class="v">—</div><div class="u">deg</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>방향 시각화</h2>
+      <div class="compass">
+        <div class="letter N">N</div>
+        <div class="letter E">E</div>
+        <div class="letter S">S</div>
+        <div class="letter W">W</div>
+        <div id="needle" class="needle"></div>
+        <div class="needle-center"></div>
+      </div>
+      <div class="grid" style="margin-top:9px">
+        <div class="metric"><div class="k">Heading visual</div><div id="compassDeg" class="v">—</div><div class="u">deg</div></div>
+        <div class="metric"><div class="k">8방위</div><div id="compassDir" class="v">—</div><div class="u">N / NE / E ...</div></div>
+      </div>
+      <div class="small" style="margin-top:8px">나침반 바늘은 브라우저 orientation 값을 시각화합니다. 절대적인 북쪽과 항상 일치한다고 가정하면 안 됩니다.</div>
+    </div>
+  </section>
+
+  <!-- 자기계 -->
+  <section id="mag" class="panel">
+    <div class="card">
+      <h2>자기계 — raw 자기장</h2>
+      <div id="magSupport" class="status"><span class="dot"></span><span>측정 전</span></div>
+      <div class="grid" style="margin-top:8px">
+        <div class="metric"><div class="k">X</div><div id="mx" class="v">—</div><div class="u">µT</div></div>
+        <div class="metric"><div class="k">Y</div><div id="my" class="v">—</div><div class="u">µT</div></div>
+        <div class="metric"><div class="k">Z</div><div id="mz" class="v">—</div><div class="u">µT</div></div>
+        <div class="metric"><div class="k">Magnitude</div><div id="mmag" class="v">—</div><div class="u">µT</div></div>
+        <div class="metric"><div class="k">Samples</div><div id="mcount" class="v">0</div><div class="u">count</div></div>
+        <div class="metric"><div class="k">Rate</div><div id="mhz" class="v">—</div><div class="u">Hz</div></div>
+      </div>
+      <div class="small" style="margin-top:8px">지원/권한/보안정책 때문에 사용하지 못할 수 있습니다. (안드로이드 크롬 일부만 지원)</div>
+    </div>
+  </section>
+
+  <!-- 지원 정보 -->
+  <section id="support" class="panel">
+    <div class="card">
+      <h2>브라우저 / 실행 환경</h2>
+      <div id="env"></div>
+    </div>
+    <div class="card">
+      <h2>데이터별 실제 상태</h2>
+      <div id="supportTable"></div>
+    </div>
+  </section>
+
+  <div class="footer">센서 데이터와 로그를 외부 서버로 전송하는 코드가 없습니다.</div>
+
+  <!-- 로그 창 -->
+  <div id="logOverlay" class="overlay" aria-hidden="true">
+    <div class="log-window" role="dialog" aria-modal="true">
+      <div class="log-head">
+        <strong>▤ 센서 로그 <span id="logCountText" class="badge">0</span></strong>
+        <div class="log-actions">
+          <button id="copyLog">복사</button>
+          <button id="clearLog">지우기</button>
+          <button id="closeLog">닫기</button>
+        </div>
+      </div>
+      <div id="logBody" class="log-body"></div>
+    </div>
+  </div>
+
+  <script>
+  "use strict";
+
+  const $ = id => document.getElementById(id);
+
+  const S = {
+    gpsWatch: null,
+    motion: false,
+    mag: null,
+    gps: [],
+    acc: [],
+    gyro: [],
+    motionCount: 0,
+    gyroCount: 0,
+    orientCount: 0,
+    magCount: 0,
+    motionStart: 0,
+    gyroStart: 0,
+    orientStart: 0,
+    magStart: 0,
+    errors: 0,
+    errorTabs: {}
+  };
+
+  function fmt(v, d = 3) {
+    return Number.isFinite(v) ? Number(v).toFixed(d) : "—";
+  }
+
+  function esc(v) {
+    return String(v ?? "—")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;");
+  }
+
+  function mag(x, y, z) {
+    return Math.sqrt((x || 0) ** 2 + (y || 0) ** 2 + (z || 0) ** 2);
+  }
+
+  function row(k, v) {
+    return `<div class="row"><div class="key">${esc(k)}</div><div class="val">${esc(v)}</div></div>`;
+  }
+
+  function log(msg, level = "info") {
+    const d = document.createElement("div");
+    d.className = "log-line " + level;
+    d.innerHTML = `<span class="log-time">[${esc(new Date().toLocaleTimeString())}]</span> ${esc(msg)}`;
+    $("logBody").prepend(d);
+    $("logCountText").textContent = String($("logBody").children.length);
+  }
+
+  function error(sensor, e, ctx = "") {
+    S.errors++;
+    S.errorTabs[sensor] = true;
+    const m = e && e.message ? e.message : String(e);
+    log("ERROR " + sensor + (ctx ? " | " + ctx : "") + " | " + m, "error");
+    const t = document.querySelector(`.tab[data-sensor="${sensor}"]`);
+    if (t) t.classList.add("has-error");
+    $("errorSummary").classList.add("show");
+    $("errorCountBadge").textContent = "⚠ " + S.errors;
+  }
+
+  window.addEventListener("error", e => error("support", e.error || new Error(e.message || "window error"), "unhandled window error"));
+  window.addEventListener("unhandledrejection", e => error("support", e.reason || new Error("promise rejection"), "unhandled promise rejection"));
+
+  function openLog() {
+    $("logOverlay").classList.add("open");
+    $("logOverlay").setAttribute("aria-hidden", "false");
+  }
+  function closeLog() {
+    $("logOverlay").classList.remove("open");
+    $("logOverlay").setAttribute("aria-hidden", "true");
+  }
+
+  $("openLog").onclick = openLog;
+  $("openLogFromError").onclick = openLog;
+  $("closeLog").onclick = closeLog;
+  $("logOverlay").onclick = e => { if (e.target === $("logOverlay")) closeLog(); };
+
+  $("clearLog").onclick = () => {
+    $("logBody").innerHTML = "";
+    S.errors = 0;
+    S.errorTabs = {};
+    document.querySelectorAll(".tab.has-error").forEach(t => t.classList.remove("has-error"));
+    $("errorCountBadge").textContent = "";
+    $("errorSummary").classList.remove("show");
+    log("로그 및 오류 표시 초기화");
+  };
+
+  $("copyLog").onclick = async () => {
+    try {
+      const s = [...$("logBody").children].map(x => x.textContent).reverse().join("\n");
+      await navigator.clipboard.writeText(s);
+      log("로그 복사 완료");
+    } catch (e) {
+      error("support", e, "로그 복사");
+    }
+  };
+
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    $(b.dataset.tab).classList.add("active");
+  });
+
+  // ===== GPS =====
+  function gpsOK(p) {
+    try {
+      const c = p.coords;
+      $("gpsLat").textContent = fmt(c.latitude, 8);
+      $("gpsLon").textContent = fmt(c.longitude, 8);
+      $("gpsAcc").textContent = fmt(c.accuracy, 2);
+      $("gpsAlt").textContent = c.altitude == null ? "null" : fmt(c.altitude, 2);
+      $("gpsAltAcc").textContent = c.altitudeAccuracy == null ? "null" : fmt(c.altitudeAccuracy, 2);
+      $("gpsSpeed").textContent = c.speed == null ? "null" : fmt(c.speed, 3) + " / " + fmt(c.speed * 3.6, 2);
+      $("gpsHeading").textContent = c.heading == null ? "null" : fmt(c.heading, 2);
+      $("gpsTime").textContent = new Date(p.timestamp).toLocaleTimeString();
+
+      S.gps.push(p);
+      if (S.gps.length > 5000) S.gps.shift();
+
+      const a = S.gps.map(x => x.coords.accuracy).filter(Number.isFinite);
+      const al = S.gps.map(x => x.coords.altitude).filter(Number.isFinite);
+      const sp = S.gps.map(x => x.coords.speed).filter(Number.isFinite);
+
+      let h = row("샘플 수", S.gps.length);
+      if (a.length) {
+        const av = a.reduce((x, y) => x + y, 0) / a.length;
+        h += row("accuracy min / avg / max", `${fmt(Math.min(...a), 2)} / ${fmt(av, 2)} / ${fmt(Math.max(...a), 2)} m`);
+      }
+      if (al.length) {
+        const av = al.reduce((x, y) => x + y, 0) / al.length;
+        h += row("altitude min / avg / max", `${fmt(Math.min(...al), 2)} / ${fmt(av, 2)} / ${fmt(Math.max(...al), 2)} m`);
+      }
+      if (sp.length) h += row("speed max", fmt(Math.max(...sp) * 3.6, 2) + " km/h");
+
+      $("gpsStats").innerHTML = h;
+      log("GPS 위치 수신: accuracy " + fmt(c.accuracy, 2) + " m");
+    } catch (e) {
+      error("gps", e, "GPS callback");
+    }
+  }
+
+  function gpsERR(e) {
+    error("gps", e, "code " + e.code);
+  }
+
+  function startGPS() {
+    try {
+      if (!("geolocation" in navigator)) throw new Error("Geolocation API 없음");
+      if (S.gpsWatch !== null) return;
+      S.gpsWatch = navigator.geolocation.watchPosition(gpsOK, gpsERR, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 30000
+      });
+      log("GPS watchPosition 시작");
+    } catch (e) {
+      error("gps", e, "GPS 시작");
+    }
+  }
+
+  function onceGPS() {
+    try {
+      if (!("geolocation" in navigator)) throw new Error("Geolocation API 없음");
+      log("GPS 1회 측정 요청");
+      navigator.geolocation.getCurrentPosition(gpsOK, gpsERR, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 30000
+      });
+    } catch (e) {
+      error("gps", e, "GPS 1회");
+    }
+  }
+
+  function stopGPS() {
+    try {
+      if (S.gpsWatch !== null) {
+        navigator.geolocation.clearWatch(S.gpsWatch);
+        S.gpsWatch = null;
+        log("GPS 중지");
+      }
+    } catch (e) {
+      error("gps", e, "GPS 중지");
+    }
+  }
+
+  // ===== Motion / Gyro / Orientation =====
+  function motion(e) {
+    try {
+      S.motionCount++;
+      if (!S.motionStart) S.motionStart = performance.now();
+
+      const a = e.acceleration || {};
+      const g = e.accelerationIncludingGravity || {};
+
+      $("ax").textContent = fmt(a.x);
+      $("ay").textContent = fmt(a.y);
+      $("az").textContent = fmt(a.z);
+      $("amag").textContent = fmt(mag(a.x, a.y, a.z));
+
+      $("gax").textContent = fmt(g.x);
+      $("gay").textContent = fmt(g.y);
+      $("gaz").textContent = fmt(g.z);
+      $("gamag").textContent = fmt(mag(g.x, g.y, g.z));
+
+      if (e.interval > 0) {
+        $("motionInterval").textContent = fmt(e.interval, 1);
+        $("motionHz").textContent = fmt(1000 / e.interval, 1);
+      }
+
+      S.acc.push({ x: a.x || 0, y: a.y || 0, z: a.z || 0 });
+      if (S.acc.length > 220) S.acc.shift();
+      draw("accCanvas", S.acc, false);
+    } catch (x) {
+      error("motion", x, "devicemotion");
+    }
+  }
+
+  function gyro(e) {
+    try {
+      const r = e.rotationRate || {};
+      if (r.alpha == null && r.beta == null && r.gamma == null) return;
+
+      S.gyroCount++;
+      if (!S.gyroStart) S.gyroStart = performance.now();
+
+      $("ra").textContent = fmt(r.alpha, 2);
+      $("rb").textContent = fmt(r.beta, 2);
+      $("rg").textContent = fmt(r.gamma, 2);
+      $("rmag").textContent = fmt(mag(r.alpha, r.beta, r.gamma), 2);
+
+      if (e.interval > 0) {
+        $("gyroInterval").textContent = fmt(e.interval, 1);
+        $("gyroHz").textContent = fmt(1000 / e.interval, 1);
+      }
+
+      S.gyro.push({ x: r.alpha || 0, y: r.beta || 0, z: r.gamma || 0 });
+      if (S.gyro.length > 220) S.gyro.shift();
+      draw("gyroCanvas", S.gyro, true);
+    } catch (x) {
+      error("gyro", x, "rotationRate");
+    }
+  }
+
+  function orientation(e) {
+    try {
+      S.orientCount++;
+      if (!S.orientStart) S.orientStart = performance.now();
+
+      $("oalpha").textContent = fmt(e.alpha, 2);
+      $("obeta").textContent = fmt(e.beta, 2);
+      $("ogamma").textContent = fmt(e.gamma, 2);
+      $("oabs").textContent = String(e.absolute);
+      $("orientCount").textContent = String(S.orientCount);
+
+      const sec = (performance.now() - S.orientStart) / 1000;
+      if (sec > 0) $("orientHz").textContent = fmt(S.orientCount / sec, 1);
+
+      $("levelGamma").textContent = fmt(e.gamma, 2);
+      $("levelBeta").textContent = fmt(e.beta, 2);
+
+      const ga = Number.isFinite(e.gamma) ? e.gamma : 0;
+      const be = Number.isFinite(e.beta) ? e.beta : 0;
+      $("horizon").style.transform = `translateY(${Math.max(-45, Math.min(45, be)) * 1.8}px) rotate(${-ga}deg)`;
+
+      if (Number.isFinite(e.alpha)) {
+        const h = ((e.alpha % 360) + 360) % 360;
+        $("compassDeg").textContent = fmt(h, 1);
+        $("compassDir").textContent = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(h / 45) % 8];
+        $("needle").style.transform = `translate(-50%,-50%) rotate(${h}deg)`;
+      }
+    } catch (x) {
+      error("orientation", x, "deviceorientation");
+    }
+  }
+
+  async function startMotion() {
+    if (S.motion) return;
+    try {
+      // iOS 권한 요청
+      if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
+        const p = await DeviceMotionEvent.requestPermission();
+        log("Motion permission: " + p);
+        if (p !== "granted") {
+          log("Motion 권한이 허용되지 않아 값이 안 들어올 수 있습니다.", "warn");
+        }
+      }
+
+      // 올바른 검사 방식
+      if (!("DeviceMotionEvent" in window)) {
+        throw new Error("DeviceMotionEvent 없음");
+      }
+
+      window.addEventListener("devicemotion", motion, true);
+      window.addEventListener("devicemotion", gyro, true);
+      window.addEventListener("deviceorientation", orientation, true);
+      S.motion = true;
+      log("가속도 / 자이로 / 방향 listener 시작");
+    } catch (e) {
+      error("motion", e, "센서 시작");
+    }
+  }
+
+  function stopMotion() {
+    try {
+      window.removeEventListener("devicemotion", motion, true);
+      window.removeEventListener("devicemotion", gyro, true);
+      window.removeEventListener("deviceorientation", orientation, true);
+      S.motion = false;
+      log("모션 센서 중지");
+    } catch (e) {
+      error("motion", e, "센서 중지");
+    }
+  }
+
+  // ===== Magnetometer =====
+  function setMag(type, msg) {
+    $("magSupport").innerHTML = `<span class="dot ${type}"></span><span>${esc(msg)}</span>`;
+  }
+
+  function magRead() {
+    try {
+      S.magCount++;
+      if (!S.magStart) S.magStart = performance.now();
+
+      const x = S.mag.x, y = S.mag.y, z = S.mag.z;
+      $("mx").textContent = fmt(x, 2);
+      $("my").textContent = fmt(y, 2);
+      $("mz").textContent = fmt(z, 2);
+      $("mmag").textContent = fmt(mag(x, y, z), 2);
+      $("mcount").textContent = String(S.magCount);
+
+      const sec = (performance.now() - S.magStart) / 1000;
+      if (sec > 0) $("mhz").textContent = fmt(S.magCount / sec, 1);
+    } catch (e) {
+      error("mag", e, "Magnetometer reading");
+    }
+  }
+
+  function startMag() {
+    try {
+      // 올바른 검사 방식
+      if (!("Magnetometer" in window)) {
+        throw new Error("Magnetometer API 없음");
+      }
+
+      S.mag = new Magnetometer({ frequency: 20 });
+      S.mag.addEventListener("reading", magRead);
+      S.mag.addEventListener("error", e => error("mag", e.error || new Error("Magnetometer error"), "sensor error"));
+      S.mag.start();
+      setMag("good", "Magnetometer 시작됨");
+      log("Magnetometer 시작 요청");
+    } catch (e) {
+      setMag("bad", "사용 불가");
+      error("mag", e, "Magnetometer 시작");
+    }
+  }
+
+  function stopMag() {
+    try {
+      if (S.mag) {
+        S.mag.stop();
+        S.mag = null;
+        log("Magnetometer 중지");
+      }
+    } catch (e) {
+      error("mag", e, "Magnetometer 중지");
+    }
+  }
+
+  // ===== Graph =====
+  function draw(id, data, gyroMode) {
+    try {
+      const c = $(id);
+      const ctx = c.getContext("2d");
+      const r = c.getBoundingClientRect();
+      const d = devicePixelRatio || 1;
+
+      c.width = Math.max(1, r.width * d);
+      c.height = Math.max(1, r.height * d);
+      ctx.clearRect(0, 0, c.width, c.height);
+      ctx.save();
+      ctx.scale(d, d);
+
+      const W = r.width, H = r.height;
+      ctx.strokeStyle = "#ffffff18";
+      for (let i = 1; i < 5; i++) {
+        const y = i * H / 5;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+
+      if (!data.length) {
+        ctx.restore();
+        return;
+      }
+
+      let max = gyroMode ? 100 : 10;
+      data.forEach(p => max = Math.max(max, Math.abs(p.x), Math.abs(p.y), Math.abs(p.z)));
+
+      [["x", "#61b4ff"], ["y", "#5ed48d"], ["z", "#ffca68"]].forEach(([k, col]) => {
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        data.forEach((p, i) => {
+          const x = i / Math.max(1, data.length - 1) * W;
+          const y = H / 2 - p[k] / max * H * 0.43;
+          i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+        });
+        ctx.stroke();
+      });
+
+      ctx.fillStyle = "#93a1b1";
+      ctx.font = "11px ui-monospace,monospace";
+      ctx.fillText("±" + max.toFixed(1) + (gyroMode ? " deg/s" : " m/s²"), 6, 14);
+      ctx.restore();
+    } catch (e) {
+      error("support", e, "graph rendering");
+    }
+  }
+
+  // ===== Support Info =====
+  function updateSupport() {
+    try {
+      $("env").innerHTML = [
+        row("Protocol", location.protocol),
+        row("Secure Context", window.isSecureContext ? "YES" : "NO"),
+        row("URL", location.href),
+        row("User Agent", navigator.userAgent),
+        row("Geolocation", "geolocation" in navigator ? "지원" : "미지원"),
+        row("DeviceMotionEvent", "DeviceMotionEvent" in window ? "지원" : "미지원"),
+        row("DeviceOrientationEvent", "DeviceOrientationEvent" in window ? "지원" : "미지원"),
+        row("Accelerometer", "Accelerometer" in window ? "지원" : "미지원"),
+        row("Gyroscope", "Gyroscope" in window ? "지원" : "미지원"),
+        row("Magnetometer", "Magnetometer" in window ? "지원" : "미지원"),
+        row("AbsoluteOrientationSensor", "AbsoluteOrientationSensor" in window ? "지원" : "미지원")
+      ].join("");
+
+      const items = [
+        ["GPS 위치", "geolocation" in navigator, S.gps.length, "Geolocation"],
+        ["선형 가속도", "DeviceMotionEvent" in window, S.motionCount, "devicemotion.acceleration"],
+        ["중력 포함 가속도", "DeviceMotionEvent" in window, S.motionCount, "devicemotion.accelerationIncludingGravity"],
+        ["자이로 회전속도", "DeviceMotionEvent" in window, S.gyroCount, "devicemotion.rotationRate"],
+        ["기기 기울기", "DeviceOrientationEvent" in window, S.orientCount, "deviceorientation beta/gamma"],
+        ["Raw 자기장 XYZ", "Magnetometer" in window, S.magCount, "Magnetometer"]
+      ];
+
+      $("supportTable").innerHTML = items.map(x =>
+        row(x[0], x[2] ? "✅ 감지됨" : x[1] ? "🟡 API 있음 / 값 미수신" : "❌ API 없음") +
+        `<div class="small">${esc(x[3])}</div>`
+      ).join("");
+    } catch (e) {
+      error("support", e, "support rendering");
+    }
+  }
+
+  // ===== Control =====
+  async function startAll() {
+    log("전체 측정 시작");
+    startGPS();
+    await startMotion();
+    startMag();
+    updateSupport();
+  }
+
+  function stopAll() {
+    stopGPS();
+    stopMotion();
+    stopMag();
+    log("전체 측정 중지");
+    updateSupport();
+  }
+
+  $("startAll").onclick = () => startAll().catch(e => error("support", e, "전체 시작"));
+  $("stopAll").onclick = stopAll;
+  $("onceGps").onclick = onceGPS;
+
+  window.addEventListener("resize", () => {
+    draw("accCanvas", S.acc, false);
+    draw("gyroCanvas", S.gyro, true);
+  });
+
+  // 초기화
+  updateSupport();
+  draw("accCanvas", [], false);
+  draw("gyroCanvas", [], true);
+  log("페이지 로드 완료");
+
+  if (location.protocol === "file:") {
+    log("현재 file:// 로 실행 중입니다. 브라우저에 따라 위치/센서 권한이 제한될 수 있습니다.", "warn");
+  }
+  if (!window.isSecureContext) {
+    log("Secure Context가 아닙니다. 일부 센서 API가 동작하지 않을 수 있습니다.", "warn");
+  }
+  </script>
 </body>
 </html>
