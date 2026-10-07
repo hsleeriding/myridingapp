@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>Browser Geolocation Tester</title>
+<style>
+  :root { --gap: 10px; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: max(12px, env(safe-area-inset-top)) 12px
+             max(16px, env(safe-area-inset-bottom)) 12px;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.4;
+    font-size: 15px;
+    background: Canvas;
+    color: CanvasText;
+  }
+  h1 { font-size: 21px; margin: 4px 0 8px; }
+  h2 { font-size: 16px; margin: 0 0 8px; }
+  .sub { opacity: .72; font-size: 12px; margin-bottom: 12px; }
+  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  button {
+    min-height: 46px; border: 1px solid #8885; border-radius: 9px;
+    background: ButtonFace; color: ButtonText; font-size: 15px;
+    padding: 8px; touch-action: manipulation;
+  }
+  button:active { transform: translateY(1px); }
+  .full { grid-column: 1 / -1; }
+  section {
+    border: 1px solid #8885; border-radius: 10px;
+    padding: 10px; margin: 10px 0;
+    overflow: hidden;
+  }
+  .row {
+    display: grid; grid-template-columns: minmax(135px, 42%) 1fr;
+    gap: 8px; padding: 5px 0; border-bottom: 1px solid #8882;
+  }
+  .row:last-child { border-bottom: 0; }
+  .key { opacity: .72; word-break: break-word; }
+  .val { font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+         word-break: break-all; text-align: right; }
+  .good { font-weight: 700; }
+  .warn { font-weight: 700; }
+  #log {
+    max-height: 260px; overflow: auto; white-space: pre-wrap;
+    font: 12px/1.45 ui-monospace, monospace;
+    background: #8881; padding: 8px; border-radius: 7px;
+  }
+  .small { font-size: 12px; opacity: .75; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+  @media (max-width: 430px) {
+    body { font-size: 14px; }
+    .row { grid-template-columns: 46% 54%; }
+    button { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<h1>📍 Browser Geolocation Tester</h1>
+<div class="sub">
+  이 페이지는 위치정보를 외부 서버로 전송하지 않습니다.
+  브라우저가 제공한 값을 이 페이지 안에서만 표시합니다.
+</div>
+
+<div class="buttons">
+  <button id="once">현재 위치 1회 측정</button>
+  <button id="watch">연속 측정 시작</button>
+  <button id="stop">연속 측정 중지</button>
+  <button id="clear">화면 초기화</button>
+  <button id="copy" class="full">현재 결과 JSON 복사</button>
+</div>
+
+<section>
+  <h2>환경</h2>
+  <div id="env"></div>
+</section>
+
+<section>
+  <h2>현재 위치</h2>
+  <div id="position"></div>
+</section>
+
+<section>
+  <h2>측정 통계</h2>
+  <div id="stats"></div>
+</section>
+
+<section>
+  <h2>이벤트 로그</h2>
+  <div id="log"></div>
+</section>
+
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+let watchId = null;
+let lastPosition = null;
+let latestData = null;
+let samples = [];
+let startedAt = null;
+
+function esc(v) {
+  return String(v ?? "—")
+    .replaceAll("&","&amp;").replaceAll("<","&lt;")
+    .replaceAll(">","&gt;").replaceAll('"',"&quot;");
+}
+
+function row(k, v, cls="") {
+  return `<div class="row"><div class="key">${esc(k)}</div><div class="val ${cls}">${esc(v)}</div></div>`;
+}
+
+function fmt(v, digits=6) {
+  if (v === null || v === undefined || Number.isNaN(v)) return "null";
+  return Number(v).toFixed(digits);
+}
+
+function log(msg) {
+  const t = new Date().toLocaleTimeString();
+  $("log").textContent = `[${t}] ${msg}\n` + $("log").textContent;
+}
+
+function renderEnv() {
+  const secure = window.isSecureContext;
+  let html = "";
+  html += row("URL", location.href);
+  html += row("Protocol", location.protocol);
+  html += row("Secure Context", secure ? "YES" : "NO", secure ? "good" : "warn");
+  html += row("Geolocation API", "geolocation" in navigator ? "지원됨" : "지원 안 됨");
+  html += row("navigator.userAgent", navigator.userAgent);
+  html += row("언어", navigator.language);
+  html += row("화면", `${screen.width} × ${screen.height} px`);
+  html += row("devicePixelRatio", window.devicePixelRatio);
+  html += row("Permissions API", navigator.permissions ? "지원됨" : "미지원");
+  $("env").innerHTML = html;
+
+  if (navigator.permissions) {
+    navigator.permissions.query({name:"geolocation"}).then(p => {
+      $("env").insertAdjacentHTML("beforeend", row("위치 권한 상태", p.state));
+      p.onchange = () => {
+        log(`위치 권한 변경: ${p.state}`);
+      };
+    }).catch(e => {
+      $("env").insertAdjacentHTML("beforeend", row("위치 권한 상태", "조회 실패"));
+    });
+  }
+}
+
+function renderPosition(pos) {
+  const c = pos.coords;
+  latestData = {
+    timestamp: pos.timestamp,
+    timestampISO: new Date(pos.timestamp).toISOString(),
+    coords: {
+      latitude: c.latitude,
+      longitude: c.longitude,
+      altitude: c.altitude,
+      accuracy: c.accuracy,
+      altitudeAccuracy: c.altitudeAccuracy,
+      heading: c.heading,
+      speed: c.speed
+    }
+  };
+
+  let html = "";
+  html += row("측정 시각", new Date(pos.timestamp).toLocaleString());
+  html += row("timestamp (ms)", pos.timestamp);
+  html += row("latitude", `${fmt(c.latitude, 8)} °`);
+  html += row("longitude", `${fmt(c.longitude, 8)} °`);
+  html += row("accuracy", c.accuracy == null ? "null" : `${fmt(c.accuracy, 2)} m`);
+  html += row("altitude", c.altitude == null ? "null" : `${fmt(c.altitude, 2)} m`);
+  html += row("altitudeAccuracy", c.altitudeAccuracy == null ? "null" : `${fmt(c.altitudeAccuracy, 2)} m`);
+  html += row("heading", c.heading == null ? "null" : `${fmt(c.heading, 2)} °`);
+  html += row("speed", c.speed == null ? "null" : `${fmt(c.speed, 3)} m/s`);
+  html += row("speed (km/h)", c.speed == null ? "null" : `${fmt(c.speed * 3.6, 2)} km/h`);
+  html += row("속도 (knots)", c.speed == null ? "null" : `${fmt(c.speed * 1.943844, 2)} kn`);
+  $("position").innerHTML = html;
+}
+
+function renderStats() {
+  if (!samples.length) {
+    $("stats").innerHTML = row("샘플 수", 0);
+    return;
+  }
+
+  const acc = samples.map(x => x.coords.accuracy).filter(Number.isFinite);
+  const alt = samples.map(x => x.coords.altitude).filter(Number.isFinite);
+  const spd = samples.map(x => x.coords.speed).filter(Number.isFinite);
+
+  let html = "";
+  html += row("샘플 수", samples.length);
+  html += row("연속 측정 시간", startedAt ? ((Date.now()-startedAt)/1000).toFixed(1) + " s" : "—");
+  if (acc.length) {
+    html += row("accuracy 최소", `${Math.min(...acc).toFixed(2)} m`);
+    html += row("accuracy 평균", `${(acc.reduce((a,b)=>a+b,0)/acc.length).toFixed(2)} m`);
+    html += row("accuracy 최대", `${Math.max(...acc).toFixed(2)} m`);
+  }
+  if (alt.length) {
+    html += row("altitude 최소", `${Math.min(...alt).toFixed(2)} m`);
+    html += row("altitude 평균", `${(alt.reduce((a,b)=>a+b,0)/alt.length).toFixed(2)} m`);
+    html += row("altitude 최대", `${Math.max(...alt).toFixed(2)} m`);
+  }
+  if (spd.length) {
+    html += row("speed 최대", `${Math.max(...spd).toFixed(3)} m/s (${(Math.max(...spd)*3.6).toFixed(2)} km/h)`);
+  }
+  $("stats").innerHTML = html;
+}
+
+function distanceMeters(a,b) {
+  const R = 6371000;
+  const p1 = a.coords.latitude * Math.PI/180;
+  const p2 = b.coords.latitude * Math.PI/180;
+  const dp = (b.coords.latitude-a.coords.latitude)*Math.PI/180;
+  const dl = (b.coords.longitude-a.coords.longitude)*Math.PI/180;
+  const x = Math.sin(dp/2)**2 +
+            Math.cos(p1)*Math.cos(p2)*Math.sin(dl/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+}
+
+function addSample(pos) {
+  samples.push(pos);
+  if (samples.length > 10000) samples.shift();
+
+  if (lastPosition) {
+    const d = distanceMeters(lastPosition, pos);
+    const dt = (pos.timestamp-lastPosition.timestamp)/1000;
+    log(`위치 갱신: Δ거리 ${d.toFixed(2)} m / Δ시간 ${dt.toFixed(2)} s / accuracy ${pos.coords.accuracy?.toFixed(2)} m`);
+  } else {
+    log(`첫 위치 수신: accuracy ${pos.coords.accuracy?.toFixed(2)} m`);
+  }
+  lastPosition = pos;
+  renderPosition(pos);
+  renderStats();
+}
+
+function geoError(e) {
+  const names = {
+    1: "PERMISSION_DENIED — 위치 권한 거부",
+    2: "POSITION_UNAVAILABLE — 위치를 사용할 수 없음",
+    3: "TIMEOUT — 위치 획득 시간 초과"
+  };
+  log(`오류 ${e.code}: ${names[e.code] || "알 수 없는 오류"} / ${e.message}`);
+}
+
+function getOnce() {
+  if (!navigator.geolocation) {
+    log("이 브라우저는 Geolocation API를 지원하지 않습니다.");
+    return;
+  }
+  log("현재 위치 1회 측정 요청...");
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      addSample(pos);
+      log("1회 측정 완료");
+    },
+    geoError,
+    { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+  );
+}
+
+function startWatch() {
+  if (watchId !== null) {
+    log("이미 연속 측정 중입니다.");
+    return;
+  }
+  samples = [];
+  lastPosition = null;
+  startedAt = Date.now();
+
+  if (!navigator.geolocation) {
+    log("이 브라우저는 Geolocation API를 지원하지 않습니다.");
+    return;
+  }
+
+  log("연속 측정 시작 — enableHighAccuracy=true, maximumAge=0");
+  watchId = navigator.geolocation.watchPosition(
+    addSample,
+    geoError,
+    { enableHighAccuracy: true, timeout: 30000, maximumAge: 0 }
+  );
+}
+
+function stopWatch() {
+  if (watchId !== null) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    log(`연속 측정 중지 — 총 ${samples.length}개 샘플`);
+    renderStats();
+  } else {
+    log("현재 연속 측정 중이 아닙니다.");
+  }
+}
+
+function clearAll() {
+  samples = [];
+  lastPosition = null;
+  latestData = null;
+  startedAt = null;
+  $("position").innerHTML = row("상태", "측정 전");
+  $("stats").innerHTML = row("샘플 수", 0);
+  $("log").textContent = "";
+  log("화면 초기화");
+}
+
+$("once").onclick = getOnce;
+$("watch").onclick = startWatch;
+$("stop").onclick = stopWatch;
+$("clear").onclick = clearAll;
+
+$("copy").onclick = async () => {
+  if (!latestData) {
+    log("복사할 위치 데이터가 없습니다.");
+    return;
+  }
+  const text = JSON.stringify(latestData, null, 2);
+  try {
+    await navigator.clipboard.writeText(text);
+    log("현재 결과 JSON을 클립보드에 복사했습니다.");
+  } catch {
+    prompt("아래 JSON을 복사하세요.", text);
+  }
+};
+
+renderEnv();
+$("position").innerHTML = row("상태", "측정 전");
+$("stats").innerHTML = row("샘플 수", 0);
+log("페이지 로드 완료");
+</script>
+</body>
+</html>
